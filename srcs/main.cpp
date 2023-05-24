@@ -129,6 +129,18 @@ void Server::processClient(int client_fd, const std::string& password)
 	}
 }
 
+bool isInVector(const std::vector<int>& vec, int target)
+{
+	for (size_t num = 0; num < vec.size(); num++)
+	{
+		if (vec[num] == target)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 int main(int ac, char **av)
 {
 	if (ac == 3)

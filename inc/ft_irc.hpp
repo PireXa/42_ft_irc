@@ -27,8 +27,16 @@
 #include "User.hpp"
 #include "Channel.hpp"
 
+#define GREEN "\033[32m"
+#define RED "\033[31m"
+#define BLUE "\033[34m"
+#define RESET "\033[0m"
+
 class Server;
 class Channel;
 //class User;
+
+bool isInVector(const std::vector<int>& vec, int target);
+bool validate_input(char *port, char *password);
 
 #endif //INC_42_FT_IRC_FT_IRC_HPP

@@ -10,14 +10,24 @@
 class Channel
 {
 	std::string					name;
-	std::string					topic;
-	int 						max_members;
 	std::map<std::string, int>	ch_members;
 	std::vector<int>	        ops;
-	int 						invite_only;
 	std::vector<int>			invite_list;
+	int 						invite_mode;
+	std::string					topic;
+	int 						topic_mode;
+	std::string					key;
+	int							key_mode;
+	int 						member_limit;
 public:
-	Channel(const std::string &nm, const std::string &tp, int mx, int invitemode) : name(nm), topic(tp), max_members(mx), invite_only(invitemode) {}
+	Channel(const std::string &nm, const std::string &tp) : name(nm), topic(tp)
+	{
+		// MODES
+		invite_mode	= 0;
+		topic_mode 	= 1;
+		key_mode	= 0;
+		member_limit	= 10;
+	}
 	// ADD
 	void addMember(const std::string &nm, int fd){ch_members.insert(std::pair<std::string, int>(nm, fd));}
 	void addOp(int fd){ops.push_back(fd);}
@@ -27,26 +37,36 @@ public:
 	// GETTERS
 	const std::string &getName() const {return name;}
 	const std::string &getTopic() const {return topic;}
-	int getMaxMembers() const {return max_members;}
+	int getMaxMembers() const {return member_limit;}
 	std::map<std::string, int> &getUsers()  {return ch_members;}
 	std::vector<int> getOps() const {return ops;}
 	std::vector<int> &getInviteList() {return invite_list;}
-	int getInviteOnly() const {return invite_only;}
-	// CHANGERS
-	void changeTopic(const std::string &tp){topic = tp;}
-	void changeMaxMembers(int mx){ max_members = mx;}
-	// SEARCH
-	bool isInVector(const std::vector<int>& vec, int target)
+	int getInviteOnly() const {return invite_mode;}
+	int getTopicMode() const {return topic_mode;}
+	int getKeyMode() const {return key_mode;}
+	const std::string &getKey() const {return key;}
+	int getMemberLimit() const {return member_limit;}
+	std::string getModes() const
 	{
-		for (size_t num = 0; num < vec.size(); num++)
-		{
-			if (vec[num] == target)
-			{
-				return true;
-			}
-		}
-		return false;
+		std::string modes;
+		if (invite_mode)
+			modes += "i";
+		if (topic_mode)
+			modes += "t";
+		if (key_mode)
+			modes += "k";
+		if (member_limit)
+			modes += "l";
+		return modes;
 	}
+	// CHANGERS
+
+	void changeInviteMode(int inv){ invite_mode = inv;}
+	void changeTopic(const std::string &tp){topic = tp;}
+	void changeTopicMode(int tp){ topic_mode = tp;}
+	void changeKey(const std::string &k){ key = k;}
+	void changeKeyMode(int k){ key_mode = k;}
+	void changeMemberLimit(int mx){ member_limit = mx;}
 	// PRINTER
 	void printMembers() const
 	{

@@ -132,6 +132,8 @@ void Server::existingClient(int fd)
 			invite((std::string)buffer, client_fd);
 		else if (((std::string) buffer).substr(0, 6) == ("TOPIC "))
 			topic((std::string)buffer, client_fd);
+		else if (((std::string) buffer).substr(0, 5) == ("MODE "))
+			mode((std::string)buffer, client_fd);
 	}
 }
 

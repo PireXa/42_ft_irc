@@ -7,10 +7,17 @@
 void Server::join(char *buffer, int client_fd)
 {
 	std::string channel_name;
+	std::string input_key;
 	if (((std::string) buffer).find('#') != std::string::npos)
 	{
 		channel_name = ((std::string) buffer).substr(((std::string) buffer).find('#'));
 		channel_name = channel_name.substr(0, channel_name.find('\n') - 1);
+		if (channel_name.find(' ') != std::string::npos)
+		{
+			input_key = (channel_name.substr(channel_name.find(' ') + 1));
+			input_key = input_key.substr(0, input_key.find('\n') - 1);
+			channel_name = channel_name.substr(0, channel_name.find(' '));
+		}
 	}
 	else
 	{
@@ -19,7 +26,7 @@ void Server::join(char *buffer, int client_fd)
 	}
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
-		if (getChannels()[i].getName() == channel_name)
+		if (getChannels()[i].getName() == channel_name) // CHANNEL ALREADY EXISTS --------------------------------------
 		{
 			std::cout << "Channel already exists\n";
 			if (getChannels()[i].getUsers().find(users[client_fd].getNickName()) != getChannels()[i].getUsers().end())
@@ -27,10 +34,22 @@ void Server::join(char *buffer, int client_fd)
 				std::cout << "User already in channel\n";
 				return;
 			}
-			getChannels()[i].printVectorInt(getChannels()[i].getInviteList());
-			if (getChannels()[i].getInviteOnly() && getChannels()[i].isInVector(getChannels()[i].getInviteList(), client_fd) == 0)
+			if (getChannels()[i].getMemberLimit() && getChannels()[i].getUsers().size() == (size_t)getChannels()[i].getMemberLimit())
+			{
+				std::string rejectMessage = ":localhost 001 " + users[client_fd].getNickName() + " :Channel " + getChannels()[i].getName() +" is full!\r\n";
+				send(client_fd, rejectMessage.c_str(), rejectMessage.length(), 0);
+				return;
+			}
+			if (getChannels()[i].getInviteOnly() && isInVector(getChannels()[i].getInviteList(), client_fd) == 0)
 			{
 				std::string rejectMessage = ":localhost 001 " + users[client_fd].getNickName() + " :You are not on the invite list for " + getChannels()[i].getName() +"!\r\n";
+				send(client_fd, rejectMessage.c_str(), rejectMessage.length(), 0);
+				return;
+			}
+			if (getChannels()[i].getKeyMode() && input_key != getChannels()[i].getKey())
+			{
+				std::cout << "input key: " << input_key << "\n";
+				std::string rejectMessage = ":localhost 001 " + users[client_fd].getNickName() + " :Wrong key for " + getChannels()[i].getName() +"!\r\n";
 				send(client_fd, rejectMessage.c_str(), rejectMessage.length(), 0);
 				return;
 			}
@@ -56,15 +75,15 @@ void Server::join(char *buffer, int client_fd)
 			return;
 		}
 	}
-	std::cout << "Channel not found, creating new channel\n";
-	Channel newChannel(channel_name, "Welcome to " + channel_name + "!", 10, 1);
-	getChannels().push_back(newChannel);
+	std::cout << "Channel not found, creating new channel\n"; // NEW CHANNEL -------------------------------------------
+	getChannels().push_back(Channel(channel_name, "Welcome to " + channel_name + "!"));
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
 		if (getChannels()[i].getName() == channel_name)
 		{
 			getChannels()[i].addMember(users[client_fd].getNickName(), client_fd);
             getChannels()[i].addOp(client_fd);
+			server_ops.push_back(client_fd);
 			std::string welcomeMessage = ":localhost 001 " + users[client_fd].getNickName() + " :Welcome to the IRC server\r\n";
 			std::string topicMessage = ":localhost 332 " + users[client_fd].getNickName() + " " + channel_name + " :" + getChannels()[i].getTopic() + "\r\n";
 			std::string namesReplyMessage = ":localhost 353 " + users[client_fd].getNickName() + " = " + channel_name + " :";
@@ -197,7 +216,7 @@ void Server::kick(std::string buf, int fd)
     {
         if (getChannels()[i].getName() == channel_name)
         {
-			if (!(getChannels()[i].isInVector(getChannels()[i].getOps(), fd)))
+			if (!(isInVector(getChannels()[i].getOps(), fd)))
 			{
 				std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
 				send(fd, msg.c_str(), msg.length(), 0);
@@ -239,7 +258,7 @@ void Server::invite(std::string buf, int fd)
 	{
 		if (getChannels()[i].getName() == channel_name)
 		{
-			if (!(getChannels()[i].isInVector(getChannels()[i].getOps(), fd)))
+			if (!(isInVector(getChannels()[i].getOps(), fd)))
 			{
 				std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
 				send(fd, msg.c_str(), msg.length(), 0);
@@ -284,7 +303,7 @@ void Server::topic(std::string buf, int fd)
 		send(fd, msg.c_str(), msg.length(), 0);
 		return;
 	}
-	if (getChannels()[i].isInVector(getChannels()[i].getOps(), fd) && !topic.empty())
+	if ((isInVector(getChannels()[i].getOps(), fd) || !getChannels()[i].getTopicMode()) && !topic.empty())
 	{
 		getChannels()[i].changeTopic(topic);
 		std::string msg = ":server PRIVMSG " + channel_name + " :Topic changed to -> " + getChannels()[i].getTopic() + "\r\n";
@@ -294,5 +313,130 @@ void Server::topic(std::string buf, int fd)
 	{
 		std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
 		send(fd, msg.c_str(), msg.length(), 0);
+	}
+}
+
+void Server::mode(std::string buf, int fd)
+{
+	std::string target = buf.substr(buf.find("MODE") + 5);
+	std::string mode;
+	if (target.find(" +") != std::string::npos || target.find(" -") != std::string::npos)
+	{
+		if (target.find('+') != std::string::npos)
+		{
+			target = target.substr(0, target.find('+') - 1);
+			mode = buf.substr(buf.find('+'), buf.find("\r\n") - buf.find('+'));
+		}
+		else
+		{
+			target = target.substr(0, target.find('-') - 1);
+			mode = buf.substr(buf.find('-'), buf.find("\r\n") - buf.find('-'));
+		}
+	}
+	else
+	{
+		target = target.substr(0, target.find("\r\n") - 1);
+		mode = "";
+	}
+	std::cout << "target: " << target << "|\n";
+	std::cout << "mode: " << mode << "|\n";
+
+	size_t i;
+	if (target.find('#') != std::string::npos)
+		for (i = 0; i < getChannels().size(); i++)
+			if (getChannels()[i].getName() == target)
+				break;
+	if (mode.empty() && target[0] != ' ')
+	{
+		if (target.find('#') != std::string::npos)
+		{
+			std::string msg = ":server PRIVMSG " + target + " :Channel modes: " + getChannels()[i].getModes() + "\r\n";
+			send(fd, msg.c_str(), msg.length(), 0);
+			return;
+		}
+		else
+		{
+			std::string user_mode;
+			if (isInVector(server_ops, fd))
+				user_mode = "+o";
+			else
+				user_mode = "-o";
+			std::string msg = target + "modes: " + user_mode + "\r\n";
+			send(fd, msg.c_str(), msg.length(), 0);
+			return;
+		}
+	}
+	else if (target[0] != ' ' && i < getChannels().size())
+	{
+		if (isInVector(getChannels()[i].getOps(), fd))
+		{
+			std::string mode_arg = mode.substr(mode.find(' ') + 1, mode.find("\r\n") - mode.find(' '));
+			std::cout << "mode_arg: " << mode_arg << "|\n";
+			if (mode.find("+i") != std::string::npos)
+				getChannels()[i].changeInviteMode(true);
+			else if (mode.find("-i") != std::string::npos)
+				getChannels()[i].changeInviteMode(false);
+			else if (mode.find("+t") != std::string::npos)
+				getChannels()[i].changeTopicMode(true);
+			else if (mode.find("-t") != std::string::npos)
+				getChannels()[i].changeTopicMode(false);
+			else if (mode.find("+k") != std::string::npos)
+			{
+				getChannels()[i].changeKeyMode(true);
+				if (!mode_arg.empty() && validate_input((char *)"4242", (char *)mode_arg.c_str()))
+					getChannels()[i].changeKey(mode_arg);
+				else
+				{
+					std::string msg = ":server PRIVMSG " + target + " :You must specify an alphanumerical key!(at most 8 chars)\r\n";
+					send(fd, msg.c_str(), msg.length(), 0);
+					return;
+				}
+			}
+			else if (mode.find("-k") != std::string::npos)
+				getChannels()[i].changeKeyMode(false);
+			else if (mode.find("+l") != std::string::npos)
+			{
+				if (!mode_arg.empty())
+				{
+					int numerical_arg = std::atoi(mode_arg.c_str());
+					if (numerical_arg > 0 && numerical_arg < 100)
+						getChannels()[i].changeMemberLimit(numerical_arg);
+					else
+					{
+						std::string msg = ":server PRIVMSG " + target + " :Limit must be between 0-100!\r\n";
+						send(fd, msg.c_str(), msg.length(), 0);
+						return;
+					}
+				}
+				else
+				{
+					std::string msg = ":server PRIVMSG " + target + " :You must specify a limit!\r\n";
+					send(fd, msg.c_str(), msg.length(), 0);
+					return;
+				}
+			}
+			else if (mode.find("-l") != std::string::npos)
+				getChannels()[i].changeMemberLimit(false);
+			else if (mode.find("+o") != std::string::npos)
+			{
+				if (!mode_arg.empty())
+					getChannels()[i].addOp(clientFd(mode_arg));
+				else
+				{
+					std::string msg = ":server PRIVMSG " + target + " :You must specify a user!\r\n";
+					send(fd, msg.c_str(), msg.length(), 0);
+					return;
+				}
+			}
+			else if (mode.find("-o") != std::string::npos)
+				getChannels()[i].removeOp(clientFd(mode_arg));
+			return;
+		}
+		else
+		{
+			std::string msg = ":server PRIVMSG " + target + " :You're not a channel operator!\r\n";
+			send(fd, msg.c_str(), msg.length(), 0);
+			return;
+		}
 	}
 }
