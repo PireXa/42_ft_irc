@@ -47,7 +47,7 @@ public:
         void oper(std::string buf, int fd);
         void kick(std::string buf, int fd);
         void invite(std::string buf, int fd);
-//        void topic(std::string buf, int fd);
+        void topic(std::string buf, int fd);
 	// Run server
 		void run();
 };

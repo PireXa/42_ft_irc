@@ -130,6 +130,8 @@ void Server::existingClient(int fd)
 			kick((std::string)buffer, client_fd);
 		else if (((std::string) buffer).substr(0, 7) == ("INVITE "))
 			invite((std::string)buffer, client_fd);
+		else if (((std::string) buffer).substr(0, 6) == ("TOPIC "))
+			topic((std::string)buffer, client_fd);
 	}
 }
 

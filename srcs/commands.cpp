@@ -257,7 +257,42 @@ void Server::invite(std::string buf, int fd)
 	}
 }
 
-//void Server::topic(std::string buf, int fd)
-//{
-//
-//}
+void Server::topic(std::string buf, int fd)
+{
+	std::string channel_name = buf.substr(buf.find("TOPIC") + 6);
+	std::string topic;
+	if (channel_name.find(':') != std::string::npos)
+	{
+		channel_name = channel_name.substr(0, channel_name.find(':') - 1);
+		topic = buf.substr(buf.find(':') + 1, buf.find("\r\n") - buf.find(':'));
+	}
+	else
+	{
+		channel_name = channel_name.substr(0, channel_name.find("\r\n"));
+		topic = "";
+	}
+	size_t i;
+	std::cout << "channel name: " << channel_name << "|\n";
+	std::cout << "topic: " << topic << "|\n";
+	for (i = 0; i < getChannels().size(); i++)
+		if (getChannels()[i].getName() == channel_name)
+			break;
+	std::cout << getChannels()[i].getTopic() << "\n";
+	if (topic.empty() && i < getChannels().size())
+	{
+		std::string msg = ":server PRIVMSG " + channel_name + " :" + getChannels()[i].getTopic() + "\r\n";
+		send(fd, msg.c_str(), msg.length(), 0);
+		return;
+	}
+	if (getChannels()[i].isInVector(getChannels()[i].getOps(), fd) && !topic.empty())
+	{
+		getChannels()[i].changeTopic(topic);
+		std::string msg = ":server PRIVMSG " + channel_name + " :Topic changed to -> " + getChannels()[i].getTopic() + "\r\n";
+		send(fd, msg.c_str(), msg.length(), 0);
+	}
+	else
+	{
+		std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
+		send(fd, msg.c_str(), msg.length(), 0);
+	}
+}
