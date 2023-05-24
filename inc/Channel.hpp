@@ -14,8 +14,10 @@ class Channel
 	int 						max_members;
 	std::map<std::string, int>	ch_members;
 	std::vector<int>	        ops;
+	int 						invite_only;
+	std::vector<int>			invite_list;
 public:
-	Channel(const std::string &nm, const std::string &tp, int mx) : name(nm), topic(tp), max_members(mx) {}
+	Channel(const std::string &nm, const std::string &tp, int mx, int invitemode) : name(nm), topic(tp), max_members(mx), invite_only(invitemode) {}
 	// ADD
 	void addMember(const std::string &nm, int fd){ch_members.insert(std::pair<std::string, int>(nm, fd));}
 	void addOp(int fd){ops.push_back(fd);}
@@ -28,9 +30,23 @@ public:
 	int getMaxMembers() const {return max_members;}
 	std::map<std::string, int> &getUsers()  {return ch_members;}
 	std::vector<int> getOps() const {return ops;}
+	std::vector<int> &getInviteList() {return invite_list;}
+	int getInviteOnly() const {return invite_only;}
 	// CHANGERS
 	void changeTopic(const std::string &tp){topic = tp;}
 	void changeMaxMembers(int mx){ max_members = mx;}
+	// SEARCH
+	bool isInVector(const std::vector<int>& vec, int target)
+	{
+		for (size_t num = 0; num < vec.size(); num++)
+		{
+			if (vec[num] == target)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 	// PRINTER
 	void printMembers() const
 	{
@@ -40,7 +56,14 @@ public:
 		}
 		std::cout << std::endl;
 	}
+	void printVectorInt(std::vector<int> vec)
+	{
+		std::cout << "Vector of ints: " << std::endl;
+		for (std::vector<int>::const_iterator it = vec.begin(); it != vec.end(); ++it) {
+			std::cout << *it << std::endl;
+		}
+		std::cout << std::endl;
+	}
 };
-
 
 #endif //INC_42_FT_IRC_CHANNEL_HPP

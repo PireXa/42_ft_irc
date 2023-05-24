@@ -39,8 +39,7 @@ public:
         void setUSER(int fd);
 		void newClient();
 		void existingClient(int fd);
-	// Managing channels
-		void addChannel(const std::string &nm, const std::string &tp, int mx);
+		int clientFd(std::string nick);
 	// Commands
 		void join(char *buf, int fd);
 		void msg(std::string buf, int fd);
@@ -48,7 +47,7 @@ public:
         void oper(std::string buf, int fd);
         void kick(std::string buf, int fd);
         void invite(std::string buf, int fd);
-        void topic(std::string buf, int fd);
+//        void topic(std::string buf, int fd);
 	// Run server
 		void run();
 };

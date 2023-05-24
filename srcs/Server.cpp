@@ -126,14 +126,21 @@ void Server::existingClient(int fd)
 			part((std::string)buffer, client_fd);
         else if (((std::string) buffer).substr(0, 5) == ("OPER "))
             oper((std::string)buffer, client_fd);
+		else if (((std::string) buffer).substr(0, 5) == ("KICK "))
+			kick((std::string)buffer, client_fd);
+		else if (((std::string) buffer).substr(0, 7) == ("INVITE "))
+			invite((std::string)buffer, client_fd);
 	}
 }
 
-// Managing channels ------------------------------------------------------------------------------------------------------
-void Server::addChannel(const std::string &nm, const std::string &tp, int mx)
+int Server::clientFd(std::string nick)
 {
-	Channel *ch = new Channel(nm, tp, mx);
-	channels.push_back(*ch);
+	for (std::map<int, User>::const_iterator p = getUsers().begin(); p != getUsers().end(); ++p)
+	{
+		if (p->second.getNickName() == nick)
+			return p->first;
+	}
+	return -1;
 }
 
 // Run server ------------------------------------------------------------------------------------------------------------

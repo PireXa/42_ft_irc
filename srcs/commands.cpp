@@ -22,6 +22,18 @@ void Server::join(char *buffer, int client_fd)
 		if (getChannels()[i].getName() == channel_name)
 		{
 			std::cout << "Channel already exists\n";
+			if (getChannels()[i].getUsers().find(users[client_fd].getNickName()) != getChannels()[i].getUsers().end())
+			{
+				std::cout << "User already in channel\n";
+				return;
+			}
+			getChannels()[i].printVectorInt(getChannels()[i].getInviteList());
+			if (getChannels()[i].getInviteOnly() && getChannels()[i].isInVector(getChannels()[i].getInviteList(), client_fd) == 0)
+			{
+				std::string rejectMessage = ":localhost 001 " + users[client_fd].getNickName() + " :You are not on the invite list for " + getChannels()[i].getName() +"!\r\n";
+				send(client_fd, rejectMessage.c_str(), rejectMessage.length(), 0);
+				return;
+			}
 			getChannels()[i].addMember(users[client_fd].getNickName(), client_fd);
 			std::string welcomeMessage = ":localhost 001 " + users[client_fd].getNickName() + " :Welcome to the IRC server\r\n";
 			std::string topicMessage = ":localhost 332 " + users[client_fd].getNickName() + " " + channel_name + " :" + getChannels()[i].getTopic() + "\r\n";
@@ -45,7 +57,7 @@ void Server::join(char *buffer, int client_fd)
 		}
 	}
 	std::cout << "Channel not found, creating new channel\n";
-	Channel newChannel(channel_name, "Welcome to " + channel_name + "!", client_fd);
+	Channel newChannel(channel_name, "Welcome to " + channel_name + "!", 10, 1);
 	getChannels().push_back(newChannel);
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
@@ -176,15 +188,76 @@ void Server::oper(std::string buf, int fd)
 
 void Server::kick(std::string buf, int fd)
 {
+    std::string channel_name = buf.substr(buf.find('#'));
+    std::string target_user = channel_name.substr(channel_name.find(' ') + 1);
+    target_user = target_user.substr(0, target_user.find("\r\n"));
+    channel_name = channel_name.substr(0, channel_name.find(' '));
 
+    for (size_t i = 0; i < getChannels().size(); i++)
+    {
+        if (getChannels()[i].getName() == channel_name)
+        {
+			if (!(getChannels()[i].isInVector(getChannels()[i].getOps(), fd)))
+			{
+				std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
+				send(fd, msg.c_str(), msg.length(), 0);
+				return;
+			}
+			if (getChannels()[i].getUsers().find(target_user) != getChannels()[i].getUsers().end())
+			{
+				std::string kickMessage = ":" + users[fd].getNickName() + " KICK " + channel_name + " " + target_user + "\r\n";
+				send(getChannels()[i].getUsers()[target_user], kickMessage.c_str(), kickMessage.length(), 0);
+
+				std::string op = users[fd].getNickName();
+				for (std::map<std::string, int>::const_iterator it = getChannels()[i].getUsers().begin(); it != getChannels()[i].getUsers().end(); ++it)
+				{
+					if (it->second != getChannels()[i].getUsers()[target_user])
+					{
+						std::cout << "Sending parting message to " << users[it->second].getNickName() << "\n";
+						std::string msg = ":server PRIVMSG " + channel_name + " :" + target_user + " was kicked by " + op + "\r\n";
+						send(it->second, msg.c_str(), msg.length(), 0);
+					}
+				}
+				getChannels()[i].removeMember(target_user);
+				return;
+			}
+        }
+    }
 }
 
 void Server::invite(std::string buf, int fd)
 {
+	std::string target_user = buf.substr(buf.find("INVITE") + 7);
+	std::string channel_name = target_user.substr(target_user.find(' ') + 1);
+	channel_name = channel_name.substr(0, channel_name.find("\r\n"));
+	target_user = target_user.substr(0, target_user.find(' '));
 
+	std::cout << "target user: " << target_user << "|\n";
+	std::cout << "channel name: " << channel_name << "|\n";
+
+	for (size_t i = 0; i < getChannels().size(); i++)
+	{
+		if (getChannels()[i].getName() == channel_name)
+		{
+			if (!(getChannels()[i].isInVector(getChannels()[i].getOps(), fd)))
+			{
+				std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
+				send(fd, msg.c_str(), msg.length(), 0);
+				return;
+			}
+			if (clientFd(target_user) != -1)
+			{
+				std::string inviteMessage = ":" + users[fd].getNickName() + " INVITE " + target_user + " " + channel_name + "\r\n";
+				send(clientFd(target_user), inviteMessage.c_str(), inviteMessage.length(), 0);
+				getChannels()[i].getInviteList().push_back(clientFd(target_user));
+				getChannels()[i].printVectorInt(getChannels()[i].getInviteList());
+				return;
+			}
+		}
+	}
 }
 
-void Server::topic(std::string buf, int fd)
-{
-
-}
+//void Server::topic(std::string buf, int fd)
+//{
+//
+//}
