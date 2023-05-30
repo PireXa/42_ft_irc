@@ -118,7 +118,13 @@ void Server::existingClient(int fd)
 		std::cout << "Received " << num_bytes << " bytes from client\n";
 		std::cout << buffer << std::endl;
 
-		if (((std::string) buffer).substr(0, 5) == ("JOIN "))
+		if (((std::string) buffer).substr(0, 5) == ("PASS "))
+			pass(buffer, client_fd);
+		else if (((std::string) buffer).substr(0, 5) == ("NICK "))
+			nick(buffer, client_fd);
+		else if (((std::string) buffer).substr(0, 5) == ("USER "))
+			user(buffer, client_fd);
+		else if (((std::string) buffer).substr(0, 5) == ("JOIN "))
 			join(buffer, client_fd);
 		else if (((std::string) buffer).substr(0, 8) == ("PRIVMSG "))
 			msg((std::string)buffer, client_fd);

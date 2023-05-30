@@ -94,13 +94,31 @@ void Server::processClient(int client_fd, const std::string& password)
 	char buffer[1024];
 	char buffer2[1024];
 	std::memset(buffer2, 0, sizeof(buffer2));
+	const int timeoutMs = 5;  // Timeout in milliseconds
+
 	while (!(((((std::string)buffer2).find("PASS") != std::string::npos) &&
 			  (((std::string)buffer2).find("NICK") != std::string::npos) &&
 			  (((std::string)buffer2).find("USER")) != std::string::npos)))
 	{
-		num_bytes += recv(client_fd, buffer, sizeof(buffer), 0);
-		std::strcat(buffer2, buffer);
-		std::memset(buffer, 0, sizeof(buffer));
+		int epollResult = epoll_wait(epoll_fd, &event, 1, timeoutMs);
+		if (epollResult == -1)
+		{
+			// Error occurred
+			std::cerr << "Error in epoll_wait()" << std::endl;
+			break;
+		}
+		else if (epollResult == 0)
+		{
+			// Timeout occurred
+			std::cout << "Timeout occurred" << std::endl;
+			return;
+		}
+		else
+		{
+			num_bytes += recv(client_fd, buffer, sizeof(buffer), 0);
+			std::strcat(buffer2, buffer);
+			std::memset(buffer, 0, sizeof(buffer));
+		}
 	}
 	buffer2[num_bytes] = '\0';
 	std::cout << "Received " << num_bytes << " bytes from client\n";
@@ -115,6 +133,9 @@ void Server::processClient(int client_fd, const std::string& password)
 		std::cout << "Password validated.\n";
 		setNICK(client_fd);
         setUSER(client_fd);
+		users[client_fd].setAuthenticated('1', 0);
+		users[client_fd].setAuthenticated('1', 1);
+		users[client_fd].setAuthenticated('1', 2);
 		request_file.clear();
 		unlink(".request.txt");
 		std::memset(buffer2, 0, sizeof(buffer2));

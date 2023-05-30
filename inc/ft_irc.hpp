@@ -2,8 +2,8 @@
 // Created by rdas-nev on 4/20/23.
 //
 
-#ifndef INC_42_FT_IRC_FT_IRC_HPP
-#define INC_42_FT_IRC_FT_IRC_HPP
+#ifndef FT_IRC_HPP
+#define FT_IRC_HPP
 
 #include <iostream>
 #include <fstream>
@@ -39,4 +39,4 @@ class Channel;
 bool isInVector(const std::vector<int>& vec, int target);
 bool validate_input(char *port, char *password);
 
-#endif //INC_42_FT_IRC_FT_IRC_HPP
+#endif //FT_IRC_HPP

@@ -22,7 +22,6 @@ class Server
         std::vector<Channel> channels;
         std::map<int, User> users;
         std::vector<int> server_ops;
-
 public:
 	// Constructor
 		Server(int prt, char *pd);
@@ -41,7 +40,10 @@ public:
 		void existingClient(int fd);
 		int clientFd(std::string nick);
 	// Commands
-		void join(char *buf, int fd);
+		void pass(std::string buf, int fd);
+		void nick(std::string buf, int fd);
+		void user(std::string buf, int fd);
+		void join(std::string buf, int fd);
 		void msg(std::string buf, int fd);
 		void part(std::string buf, int fd);
         void oper(std::string buf, int fd);

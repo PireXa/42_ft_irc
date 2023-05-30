@@ -15,6 +15,7 @@ class User
 		std::string			nick;
 		int					ufd;
         std::vector<std::string>	channels;
+		std::string 		authenticated; // [0] = PASS, [1] = NICK, [2] = USER
 
 	public:
         User();
@@ -29,5 +30,8 @@ class User
 		void setUserfd(int fd) { User::ufd = fd; }
     // Managing channels
         void addChannel(const std::string &nm) {channels.push_back(nm);}
+	// Authentication
+		void setAuthenticated(char code, int position) {User::authenticated[position] = code;}
+		int isAuthenticated() const;
 };
 #endif //INC_42_FT_IRC_USER_HPP

@@ -34,6 +34,7 @@ public:
 	// REMOVE
 	void removeMember(const std::string &nm){ch_members.erase(nm);}
 	void removeOp(int fd){ops.erase(std::remove(ops.begin(), ops.end(), fd), ops.end());}
+	void removeInvite(int fd){invite_list.erase(std::remove(invite_list.begin(), invite_list.end(), fd), invite_list.end());}
 	// GETTERS
 	const std::string &getName() const {return name;}
 	const std::string &getTopic() const {return topic;}
