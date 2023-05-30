@@ -4,6 +4,32 @@
 
 #include "../inc/ft_irc.hpp"
 
+void Server::commands(std::string buffer, int client_fd)
+{
+	if (buffer.substr(0, 5) == ("PASS "))
+		pass(buffer, client_fd);
+	else if (buffer.substr(0, 5) == ("NICK "))
+		nick(buffer, client_fd);
+	else if (buffer.substr(0, 5) == ("USER "))
+		user(buffer, client_fd);
+	else if (buffer.substr(0, 5) == ("JOIN "))
+		join(buffer, client_fd);
+	else if (buffer.substr(0, 8) == ("PRIVMSG "))
+		msg((std::string)buffer, client_fd);
+	else if (buffer.substr(0, 5) == ("PART "))
+		part((std::string)buffer, client_fd);
+	else if (buffer.substr(0, 5) == ("OPER "))
+		oper((std::string)buffer, client_fd);
+	else if (buffer.substr(0, 5) == ("KICK "))
+		kick((std::string)buffer, client_fd);
+	else if (buffer.substr(0, 7) == ("INVITE "))
+		invite((std::string)buffer, client_fd);
+	else if (buffer.substr(0, 6) == ("TOPIC "))
+		topic((std::string)buffer, client_fd);
+	else if (buffer.substr(0, 5) == ("MODE "))
+		mode((std::string)buffer, client_fd);
+}
+
 void Server::pass(std::string buf, int fd)
 {
 	std::string pass = buf.substr(buf.find("PASS")+5);
@@ -50,12 +76,6 @@ void Server::join(std::string buf, int client_fd)
 	std::string channel_name;
 	std::string input_key;
 
-	if (!users[client_fd].isAuthenticated())
-	{
-		send(client_fd, "error: not authenticated.\r\n", 29, 0);
-//		send(client_fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
 	if (buf.find('#') != std::string::npos)
 	{
 		channel_name = buf.substr(buf.find('#'));
@@ -157,13 +177,6 @@ void Server::join(std::string buf, int client_fd)
 
 void Server::msg(std::string buf, int fd)
 {
-	if (!users[fd].isAuthenticated())
-	{
-		send(fd, "error: not authenticated.\r\n", 29, 0);
-//		send(fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
-
 	std::string message = buf.substr(buf.find(':') + 1);
 	message = message.substr(0, message.find('\n') - 1);
 	std::cout << "Message: " << message << "\n";
@@ -210,13 +223,6 @@ void Server::msg(std::string buf, int fd)
 
 void Server::part(std::string buf, int fd)
 {
-	if (!users[fd].isAuthenticated())
-	{
-		send(fd, "error: not authenticated.\r\n", 29, 0);
-//		send(fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
-
 	std::string channel_name = buf.substr(buf.find('#'));
 	channel_name = channel_name.substr(0, channel_name.find(" "));
 	for (size_t i = 0; i < getChannels().size(); i++)
@@ -244,13 +250,6 @@ void Server::part(std::string buf, int fd)
 
 void Server::oper(std::string buf, int fd)
 {
-	if (!users[fd].isAuthenticated())
-	{
-		send(fd, "error: not authenticated.\r\n", 29, 0);
-//		send(fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
-
     std::string target = buf.substr(buf.find("OPER") + 5);
     std::string input_pass = target.substr(target.find(' ') + 1);
     input_pass = input_pass.substr(0, input_pass.find("\r\n"));
@@ -276,13 +275,6 @@ void Server::oper(std::string buf, int fd)
 
 void Server::kick(std::string buf, int fd)
 {
-	if (!users[fd].isAuthenticated())
-	{
-		send(fd, "error: not authenticated.\r\n", 29, 0);
-//		send(fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
-
     std::string channel_name = buf.substr(buf.find('#'));
     std::string target_user = channel_name.substr(channel_name.find(' ') + 1);
     target_user = target_user.substr(0, target_user.find("\r\n"));
@@ -323,13 +315,6 @@ void Server::kick(std::string buf, int fd)
 
 void Server::invite(std::string buf, int fd)
 {
-	if (!users[fd].isAuthenticated())
-	{
-		send(fd, "error: not authenticated.\r\n", 29, 0);
-//		send(fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
-
 	std::string target_user = buf.substr(buf.find("INVITE") + 7);
 	std::string channel_name = target_user.substr(target_user.find(' ') + 1);
 	channel_name = channel_name.substr(0, channel_name.find("\r\n"));
@@ -362,13 +347,6 @@ void Server::invite(std::string buf, int fd)
 
 void Server::topic(std::string buf, int fd)
 {
-	if (!users[fd].isAuthenticated())
-	{
-		send(fd, "error: not authenticated.\r\n", 29, 0);
-//		send(fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
-
 	std::string channel_name = buf.substr(buf.find("TOPIC") + 6);
 	std::string topic;
 	if (channel_name.find(':') != std::string::npos)
@@ -409,13 +387,6 @@ void Server::topic(std::string buf, int fd)
 
 void Server::mode(std::string buf, int fd)
 {
-	if (!users[fd].isAuthenticated())
-	{
-		send(fd, "error: not authenticated.\r\n", 29, 0);
-//		send(fd, "please provide the password and set a nick and user.\r\n", 56, 0);
-		return;
-	}
-
 	std::string target = buf.substr(buf.find("MODE") + 5);
 	std::string mode;
 	if (target.find(" +") != std::string::npos || target.find(" -") != std::string::npos)

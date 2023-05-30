@@ -14,7 +14,7 @@ class Channel;
 class Server
 {
 		const std::string 	password;
-        const std::string   oper_auth;
+        const std::string   oper_auth; // is: operador
 		int 				socket_fd;
 		struct sockaddr_in	server_addr;
 		int					epoll_fd;
@@ -40,6 +40,7 @@ public:
 		void existingClient(int fd);
 		int clientFd(std::string nick);
 	// Commands
+		void commands(std::string buf, int fd);
 		void pass(std::string buf, int fd);
 		void nick(std::string buf, int fd);
 		void user(std::string buf, int fd);
