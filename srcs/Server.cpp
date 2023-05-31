@@ -115,13 +115,27 @@ void Server::existingClient(int fd)
 	}
 	else
 	{
+		static std::string partial_buffer[1024];
 		std::cout << "Received " << num_bytes << " bytes from client\n";
 		std::cout << buffer << std::endl;
-		commands(buffer, client_fd);
+		if (((std::string)buffer).find('\n') != std::string::npos)
+		{
+			std::cout << "NORMAL COMMAND\n";
+			std::string command[1024];
+			command[client_fd] = partial_buffer[client_fd] + buffer;
+			partial_buffer[client_fd].clear();
+			std::cout << "COMMAND: " << command[client_fd] << std::endl;
+			commands(command[client_fd], client_fd);
+		}
+		else
+		{
+			std::cout << "PARTIAL COMMAND\n";
+			partial_buffer[client_fd] += buffer;
+		}
 	}
 }
 
-int Server::clientFd(std::string nick)
+int Server::clientFd(std::string &nick)
 {
 	for (std::map<int, User>::const_iterator p = getUsers().begin(); p != getUsers().end(); ++p)
 	{
@@ -135,7 +149,7 @@ int Server::clientFd(std::string nick)
 void Server::run()
 {
 	// Listen for incoming connections ------------------------------------------------------------------------------------
-	listen(this->getSocketFd(), 5); // Allow up to 5 pending connections in the queue
+	listen(this->getSocketFd(), 15); // Allow up to 5 pending connections in the queue
 //	client_fds.push_back(this->getSocketFd());
     users[this->getSocketFd()] = User(".server", ".server", this->getSocketFd());
 	// The event loop -----------------------------------------------------------------------------------------------------

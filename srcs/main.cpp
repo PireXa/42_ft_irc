@@ -43,7 +43,11 @@ void Server::setNICK(int fd)
 	std::string nick = line.substr(line.find("NICK")+5);
 	if (nick[nick.length() - 1] == '\n' || nick[nick.length() - 1] == '\r')
 		nick = nick.substr(0, nick.length() - 1);
-	getUsers()[fd].setNickName(nick);
+	if (validateNickUser(nick, fd, 0))
+	{
+		getUsers()[fd].setNickName(nick);
+		users[fd].setAuthenticated('1', 1);
+	}
 }
 
 void Server::setUSER(int fd)
@@ -63,8 +67,12 @@ void Server::setUSER(int fd)
     if (user[user.length() - 1] == '\n' || user[user.length() - 1] == '\r')
         user = user.substr(0, user.length() - 1);
     user = user.substr(0, user.find(' '));
-    getUsers()[fd].setUserName(user);
-    std::cout << "User " << user << " has joined the server\n";
+	if (validateNickUser(user, fd, 1))
+	{
+		getUsers()[fd].setNickName(user);
+		users[fd].setAuthenticated('1', 2);
+		std::cout << "User " << user << " has joined the server\n";
+	}
 }
 
 bool validate_input(char *port, char *password)
@@ -87,6 +95,35 @@ bool validate_input(char *port, char *password)
 	return true;
 }
 
+bool Server::validateNickUser(std::string &name, int client_fd, int flag)
+{
+	if (name.length() < 1)
+	{
+		send(client_fd, "Nickname or username too short\r\n", 32, 0);
+		return false;
+	}
+	if (name.length() > 9)
+	{
+		send(client_fd, "Nickname or username too long\r\n", 31, 0);
+		return false;
+	}
+	if (name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::string::npos)
+	{
+		send(client_fd, "Nickname or username contains invalid characters\r\n", 51, 0);
+		return false;
+	}
+	for (size_t i = 0; i < users.size(); i++)
+	{
+		if (users[(int)i].getNickName() == name && flag == 0)
+		{
+			send(client_fd, "Nickname already in use\r\n", 25, 0);
+			return false;
+		}
+	}
+	return true;
+}
+
+
 void Server::processClient(int client_fd, const std::string& password)
 {
 	std::cout << "Client checking in\n";
@@ -95,6 +132,7 @@ void Server::processClient(int client_fd, const std::string& password)
 	char buffer2[1024];
 	std::memset(buffer2, 0, sizeof(buffer2));
 	const int timeoutMs = 5;  // Timeout in milliseconds
+
 	while (!(((((std::string)buffer2).find("PASS") != std::string::npos) &&
 			  (((std::string)buffer2).find("NICK") != std::string::npos) &&
 			  (((std::string)buffer2).find("USER")) != std::string::npos)))
@@ -131,11 +169,9 @@ void Server::processClient(int client_fd, const std::string& password)
 	{
 		send(client_fd, "Valid password, welcome.\r\n", 26, 0);
 		std::cout << "Password validated.\n";
-		setNICK(client_fd);
-        setUSER(client_fd);
 		users[client_fd].setAuthenticated('1', 0);
-		users[client_fd].setAuthenticated('1', 1);
-		users[client_fd].setAuthenticated('1', 2);
+		setNICK(client_fd);
+		setUSER(client_fd);
 		request_file.clear();
 		unlink(".request.txt");
 		std::memset(buffer2, 0, sizeof(buffer2));

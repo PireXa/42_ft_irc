@@ -6,11 +6,18 @@
 
 void Server::commands(std::string buffer, int client_fd)
 {
-	if (buffer.substr(0, 5) == ("PASS "))
+	if (buffer[0] == '\n' || buffer[0] == '\r')
+		return;
+	if (buffer.substr(0, 4) == ("PASS"))
 		pass(buffer, client_fd);
-	else if (buffer.substr(0, 5) == ("NICK "))
+	else if (users[client_fd].getPassAuth() == '0')
+	{
+		send(client_fd, "\nerror: introduce password first.\r\n", 35, 0);
+		return;
+	}
+	else if (buffer.substr(0, 4) == ("NICK"))
 		nick(buffer, client_fd);
-	else if (buffer.substr(0, 5) == ("USER "))
+	else if (buffer.substr(0, 4) == ("USER"))
 		user(buffer, client_fd);
 	else if (!users[client_fd].isAuthenticated())
 	{
@@ -41,11 +48,15 @@ void Server::pass(std::string buf, int fd)
 	pass = pass.substr(0, pass.find('\n'));
 	pass = pass.substr(0, pass.find('\r'));
 	std::cout << "pass: " << pass << "|" <<  std::endl;
+	if (users[fd].getPassAuth() == '1')
+	{
+		send(fd, "Password already set.\r\n", 24, 0);
+		return;
+	}
 	if (pass == password)
 	{
 		users[fd].setAuthenticated('1', 0);
 		send(fd, "Password correct.\r\n", 19, 0);
-		return;
 	}
 	else
 	{
@@ -56,24 +67,54 @@ void Server::pass(std::string buf, int fd)
 
 void Server::nick(std::string buf, int fd)
 {
+	if (buf[4] == '\n' || buf[4] == '\r' || buf[4] != ' ')
+	{
+		send(fd, "Invalid nickname.\r\n", 19, 0);
+		return;
+	}
 	std::string nick = buf.substr(buf.find("NICK")+5);
 	nick = nick.substr(0, nick.find('\n'));
 	nick = nick.substr(0, nick.find('\r'));
 	std::cout << "nick: " << nick << "|" <<  std::endl;
+	if (!validateNickUser(nick, fd, 0))
+		return;
 	users[fd].setNickName(nick);
 	users[fd].setAuthenticated('1', 1);
 	send(fd, "Your nickname has been set.\r\n", 29, 0);
+	if (users[fd].isAuthenticated() && !users[fd].getAuthCount())
+	{
+		send(fd, "You are now authenticated.\r\n", 28, 0);
+		users[fd].setAuthCount(1);
+	}
 }
 
 void Server::user(std::string buf, int fd)
 {
+	if (users[fd].getUserAuth() == '1')
+	{
+		send(fd, "User already set.\r\n", 19, 0);
+		return;
+	}
+	if (buf[4] == '\n' || buf[4] == '\r' || buf[4] != ' ')
+	{
+		send(fd, "Invalid username.\r\n", 19, 0);
+		return;
+	}
 	std::string user = buf.substr(buf.find("USER")+5);
 	user = user.substr(0, user.find('\n'));
 	user = user.substr(0, user.find('\r'));
 	std::cout << "user: " << user << "|" << std::endl;
+	if (!validateNickUser(user, fd, 1))
+		return;
 	users[fd].setUserName(user);
 	users[fd].setAuthenticated('1', 2);
 	send(fd, "Your username has been set.\r\n", 29, 0);
+	if (users[fd].isAuthenticated() && !users[fd].getAuthCount())
+	{
+		send(fd, "You are now authenticated.\r\n", 28, 0);
+		users[fd].setAuthCount(1);
+	}
+
 }
 
 void Server::join(std::string buf, int client_fd)
@@ -84,13 +125,16 @@ void Server::join(std::string buf, int client_fd)
 	if (buf.find('#') != std::string::npos)
 	{
 		channel_name = buf.substr(buf.find('#'));
-		channel_name = channel_name.substr(0, channel_name.find('\n') - 1);
+		channel_name = channel_name.substr(0, channel_name.find('\n'));
+		channel_name = channel_name.substr(0, channel_name.find('\r'));
 		if (channel_name.find(' ') != std::string::npos)
 		{
 			input_key = (channel_name.substr(channel_name.find(' ') + 1));
-			input_key = input_key.substr(0, input_key.find('\n') - 1);
+			input_key = input_key.substr(0, input_key.find('\n'));
+			input_key = input_key.substr(0, input_key.find('\r'));
 			channel_name = channel_name.substr(0, channel_name.find(' '));
 		}
+		std::cout << "CHANNEL_NAME: " << channel_name << "|" << std::endl;
 	}
 	else
 	{
@@ -183,7 +227,7 @@ void Server::join(std::string buf, int client_fd)
 void Server::msg(std::string buf, int fd)
 {
 	std::string message = buf.substr(buf.find(':') + 1);
-	message = message.substr(0, message.find('\n') - 1);
+	message = message.substr(0, message.find('\n'));
 	std::cout << "Message: " << message << "\n";
 
 	if (buf[8] == '#') // Channel message

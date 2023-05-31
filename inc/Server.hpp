@@ -38,7 +38,8 @@ public:
         void setUSER(int fd);
 		void newClient();
 		void existingClient(int fd);
-		int clientFd(std::string nick);
+		int clientFd(std::string &nick);
+		bool validateNickUser(std::string &name, int client_fd, int flag);
 	// Commands
 		void commands(std::string buf, int fd);
 		void pass(std::string buf, int fd);

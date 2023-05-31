@@ -9,6 +9,8 @@ User::User()
     user	= "";
     nick	= "";
     ufd		= -1;
+	authenticated = "000";
+	authenticated_count = 0;
 }
 
 User::User(std::string username, std::string nickname, int fd)
@@ -17,6 +19,7 @@ User::User(std::string username, std::string nickname, int fd)
 	nick	= nickname;
 	ufd		= fd;
 	authenticated = "000";
+	authenticated_count = 0;
 }
 
 int User::isAuthenticated() const
