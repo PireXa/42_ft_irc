@@ -12,6 +12,11 @@ void Server::commands(std::string buffer, int client_fd)
 		nick(buffer, client_fd);
 	else if (buffer.substr(0, 5) == ("USER "))
 		user(buffer, client_fd);
+	else if (!users[client_fd].isAuthenticated())
+	{
+		send(client_fd, "\nerror: not authenticated.\r\n", 27, 0);
+		return;
+	}
 	else if (buffer.substr(0, 5) == ("JOIN "))
 		join(buffer, client_fd);
 	else if (buffer.substr(0, 8) == ("PRIVMSG "))
@@ -437,7 +442,7 @@ void Server::mode(std::string buf, int fd)
 	}
 	else if (target[0] != ' ' && i < getChannels().size())
 	{
-		if (isInVector(getChannels()[i].getOps(), fd))
+		if (isInVector(getChannels()[i].getOps(), fd) || isInVector(server_ops, fd))
 		{
 			std::string mode_arg = mode.substr(mode.find(' ') + 1, mode.find("\r\n") - mode.find(' '));
 			std::cout << "mode_arg: " << mode_arg << "|\n";

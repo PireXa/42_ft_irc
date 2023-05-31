@@ -89,7 +89,7 @@ void Server::existingClient(int fd)
 		epoll_ctl(getEpollFd(), EPOLL_CTL_DEL, client_fd, 0);
 		getUsers().erase(client_fd);
 	}
-	else if (num_bytes == 0 || ((std::string) buffer).find("QUIT :Leaving") != std::string::npos)
+	else if (num_bytes == 0 || ((std::string) buffer).substr(0, 13) == ("QUIT :Leaving"))
 	{
         for (std::vector<Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
         {
@@ -117,11 +117,6 @@ void Server::existingClient(int fd)
 	{
 		std::cout << "Received " << num_bytes << " bytes from client\n";
 		std::cout << buffer << std::endl;
-		if (!users[client_fd].isAuthenticated())
-		{
-			send(client_fd, "error: not authenticated.\r\n", 27, 0);
-			return;
-		}
 		commands(buffer, client_fd);
 	}
 }

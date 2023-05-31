@@ -95,7 +95,6 @@ void Server::processClient(int client_fd, const std::string& password)
 	char buffer2[1024];
 	std::memset(buffer2, 0, sizeof(buffer2));
 	const int timeoutMs = 5;  // Timeout in milliseconds
-
 	while (!(((((std::string)buffer2).find("PASS") != std::string::npos) &&
 			  (((std::string)buffer2).find("NICK") != std::string::npos) &&
 			  (((std::string)buffer2).find("USER")) != std::string::npos)))
@@ -109,8 +108,9 @@ void Server::processClient(int client_fd, const std::string& password)
 		}
 		else if (epollResult == 0)
 		{
-			// Timeout occurred
-			std::cout << "Timeout occurred" << std::endl;
+			// Timeout occurred /  Not Hexchat
+			send(client_fd, "Please login\r\n", 14, 0);
+			std::cout << "Client not using Hexchat connected, waiting for authentication.\n" << std::endl;
 			return;
 		}
 		else
@@ -168,7 +168,7 @@ int main(int ac, char **av)
 	{
 		try
 		{
-		// Validate input------------------------------------------------------------------------
+		// Validate input-----------------------------------------------------------------------
 			if (!validate_input(av[1], av[2]))
 				return EXIT_FAILURE;
 		// Run server---------------------------------------------------------------------------
