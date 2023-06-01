@@ -22,6 +22,7 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 #include <ctime>
+#include <csignal>
 
 #include "Server.hpp"
 #include "User.hpp"
@@ -30,6 +31,9 @@
 #define GREEN "\033[32m"
 #define RED "\033[31m"
 #define BLUE "\033[34m"
+#define YELLOW "\033[33m"
+#define MAGENTA "\033[35m"
+#define ORANGE "\033[38;5;208m"
 #define RESET "\033[0m"
 
 class Server;
@@ -38,5 +42,6 @@ class Channel;
 
 bool isInVector(const std::vector<int>& vec, int target);
 bool validate_input(char *port, char *password);
+void sigHandler();
 
 #endif //FT_IRC_HPP

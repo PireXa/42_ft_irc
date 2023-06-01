@@ -10,7 +10,7 @@ bool validate_password(std::string const &password)
     file.open(".request.txt");
     if (!file.is_open())
     {
-        std::cerr << "Error opening password file\n";
+        std::cerr << RED"Error opening request file\n" RESET;
         return false;
     }
     std::string line;
@@ -33,7 +33,7 @@ void Server::setNICK(int fd)
 	file.open(".request.txt");
 	if (!file.is_open())
 	{
-		std::cerr << "Error opening password file\n";
+		std::cerr << RED"Error opening request file\n" RESET;
 		return;
 	}
 	std::string line;
@@ -56,7 +56,7 @@ void Server::setUSER(int fd)
     file.open(".request.txt");
     if (!file.is_open())
     {
-        std::cerr << "Error opening password file\n";
+        std::cerr << RED"Error opening request file\n" RESET;
         return;
     }
     std::string line;
@@ -71,7 +71,6 @@ void Server::setUSER(int fd)
 	{
 		getUsers()[fd].setNickName(user);
 		users[fd].setAuthenticated('1', 2);
-		std::cout << "User " << user << " has joined the server\n";
 	}
 }
 
@@ -79,17 +78,17 @@ bool validate_input(char *port, char *password)
 {
 	if (std::atoi(port) < 1024 || std::atoi(port) > 65535)
 	{
-		std::cerr << "Invalid port number\n";
+		std::cerr << RED"Invalid port number\n" RESET;
 		return false;
 	}
 	if (((std::string)password).length() < 1 && ((std::string)password).length() > 8)
 	{
-		std::cerr << "Password must be at most 8 characters long\n";
+		std::cerr << RED"Password must be at most 8 characters long\n" RESET;
 		return false;
 	}
 	if (((std::string)password).find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") != std::string::npos)
 	{
-		std::cerr << "Password must contain only alphanumeric characters\n";
+		std::cerr << RED"Password must contain only alphanumeric characters\n" RESET;
 		return false;
 	}
 	return true;
@@ -102,7 +101,7 @@ bool Server::validateNickUser(std::string &name, int client_fd, int flag)
 		send(client_fd, "Nickname or username too short\r\n", 32, 0);
 		return false;
 	}
-	if (name.length() > 9)
+	if (name.length() > 12)
 	{
 		send(client_fd, "Nickname or username too long\r\n", 31, 0);
 		return false;
@@ -123,7 +122,6 @@ bool Server::validateNickUser(std::string &name, int client_fd, int flag)
 	return true;
 }
 
-
 void Server::processClient(int client_fd, const std::string& password)
 {
 	std::cout << "Client checking in\n";
@@ -141,14 +139,14 @@ void Server::processClient(int client_fd, const std::string& password)
 		if (epollResult == -1)
 		{
 			// Error occurred
-			std::cerr << "Error in epoll_wait()" << std::endl;
+			std::cerr << RED"Error in epoll_wait()" RESET << std::endl;
 			break;
 		}
 		else if (epollResult == 0)
 		{
 			// Timeout occurred /  Not Hexchat
 			send(client_fd, "Please login\r\n", 14, 0);
-			std::cout << "Client not using Hexchat connected, waiting for authentication.\n" << std::endl;
+			std::cout << YELLOW"Client not using Hexchat connected, waiting for authentication.\n" RESET << std::endl;
 			return;
 		}
 		else
@@ -159,7 +157,7 @@ void Server::processClient(int client_fd, const std::string& password)
 		}
 	}
 	buffer2[num_bytes] = '\0';
-	std::cout << "Received " << num_bytes << " bytes from client\n";
+	std::cout << GREEN"Received " << num_bytes << " bytes from client\n" RESET;
 	std::cout << buffer2 << std::endl;
 
 	std::ofstream request_file(".request.txt", std::ios::out | std::ios::binary);
@@ -168,7 +166,7 @@ void Server::processClient(int client_fd, const std::string& password)
 	if (validate_password(password))
 	{
 		send(client_fd, "Valid password, welcome.\r\n", 26, 0);
-		std::cout << "Password validated.\n";
+		std::cout << GREEN"Password validated.\n" RESET;
 		users[client_fd].setAuthenticated('1', 0);
 		setNICK(client_fd);
 		setUSER(client_fd);
@@ -178,9 +176,10 @@ void Server::processClient(int client_fd, const std::string& password)
 	}
 	else
 	{
-		std::cout << "Password not validated.\n";
-		send(client_fd, "Invalid password, goodbye.\r\n", 26, 0);
-		close(client_fd);
+		std::cout << RED"Password not validated.\n" RESET;
+		send(client_fd, "Invalid password, submit again please.\r\n", 40, 0);
+
+//		close(client_fd);
 		unlink(".request.txt");
 		std::memset(buffer2, 0, sizeof(buffer2));
 	}
@@ -196,6 +195,23 @@ bool isInVector(const std::vector<int>& vec, int target)
 		}
 	}
 	return false;
+}
+
+int turn_off = false;
+
+void	Server::ctrlc(int s)
+{
+	if (s == 2)
+	{
+		std::cout << BLUE"\nShutting down server.\n" RESET;
+		turn_off = true;
+	}
+}
+
+void	sigHandler()
+{
+	signal(SIGINT, Server::ctrlc);
+	signal(SIGQUIT, SIG_IGN);
 }
 
 int main(int ac, char **av)
@@ -218,7 +234,7 @@ int main(int ac, char **av)
 	}
 	else
 	{
-		std::cerr << "Usage: ./ft_irc <port> <password>\n";
+		std::cerr << RED"Usage: ./ft_irc <port> <password>\n" RESET;
 		return EXIT_FAILURE;
 	}
 }

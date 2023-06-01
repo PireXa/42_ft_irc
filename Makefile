@@ -1,4 +1,4 @@
-SRCS	= main.cpp Server.cpp commands.cpp User.cpp\
+SRCS	= main.cpp Server.cpp  commands.cpp User.cpp\
 
 OBJS	=	$(addprefix objs/,$(SRCS:.cpp=.o))
 

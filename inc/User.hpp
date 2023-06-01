@@ -6,8 +6,6 @@
 #define INC_42_FT_IRC_USER_HPP
 
 #include "ft_irc.hpp"
-#include "Channel.hpp"
-#include "Server.hpp"
 
 class User
 {
