@@ -42,6 +42,7 @@ class Channel;
 
 bool isInVector(const std::vector<int>& vec, int target);
 bool validate_input(char *port, char *password);
+bool validate_password(std::string const &password);
 void sigHandler();
 
 #endif //FT_IRC_HPP

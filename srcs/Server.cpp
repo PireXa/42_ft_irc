@@ -4,6 +4,8 @@
 
 #include "../inc/Server.hpp"
 
+extern bool turn_off;
+
 // Constructor ----------------------------------------------------------------------------------------------------------
 Server::Server(int port, char *pd) :  password((std::string)pd), oper_auth("operador"), channels()
 {
@@ -107,7 +109,7 @@ void Server::existingClient(int fd)
                 }
             }
         }
-        std::cout << ORANGE"Client disconnected.\n" RESET;
+        std::cout << ORANGE"Client disconnected." RESET "\n";
         close(client_fd);
 		epoll_ctl(getEpollFd(), EPOLL_CTL_DEL, client_fd, 0);
 		getUsers().erase(client_fd);
@@ -144,13 +146,11 @@ int Server::clientFd(std::string &nick)
 	return -1;
 }
 
-extern bool turn_off;
-
 // Run server ------------------------------------------------------------------------------------------------------------
 void Server::run()
 {
 	// Listen for incoming connections ------------------------------------------------------------------------------------
-	listen(this->getSocketFd(), 15); // Allow up to 5 pending connections in the queue
+	listen(this->getSocketFd(), 15); // Allow up to 15 pending connections in the queue
 //	client_fds.push_back(this->getSocketFd());
     users[this->getSocketFd()] = User(".server", ".server", this->getSocketFd());
 	// The event loop -----------------------------------------------------------------------------------------------------
@@ -166,9 +166,7 @@ void Server::run()
 		// Check for errors --------------------------------------------------------------------------------------------
 		if (num_events == -1)
 		{
-//			std::cerr << "Error in epoll_wait\n";
 			close(this->getEpollFd());
-//			throw std::exception();
 			return;
 		}
 		// Handle events for each file descriptor -----------------------------------------------------------------------

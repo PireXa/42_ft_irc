@@ -8,16 +8,16 @@ void Server::commands(std::string buffer, int client_fd)
 {
 	if (buffer[0] == '\n' || buffer[0] == '\r')
 		return;
-	if (buffer.substr(0, 4) == ("PASS"))
+	if (buffer.substr(0, 5) == ("PASS "))
 		pass(buffer, client_fd);
 	else if (users[client_fd].getPassAuth() == '0') // If password is not authenticated
 	{
 		send(client_fd, "\nerror: introduce password first.\r\n", 35, 0);
 		return;
 	}
-	else if (buffer.substr(0, 4) == ("NICK"))
+	else if (buffer.substr(0, 5) == ("NICK "))
 		nick(buffer, client_fd);
-	else if (buffer.substr(0, 4) == ("USER"))
+	else if (buffer.substr(0, 5) == ("USER "))
 		user(buffer, client_fd);
 	else if (!users[client_fd].isAuthenticated()) // If user is not authenticated
 	{
@@ -48,7 +48,8 @@ void Server::commands(std::string buffer, int client_fd)
 
 void Server::pass(std::string buf, int fd)
 {
-	std::string pass = buf.substr(buf.find("PASS")+5);
+	std::string pass = buf.substr(buf.find("PASS ") + 5);
+	pass = pass.substr(pass.find_first_not_of(' '));
 	pass = pass.substr(0, pass.find('\n'));
 	pass = pass.substr(0, pass.find('\r'));
 	std::cout << BLUE"pass: " RESET<< pass << std::endl;
@@ -75,7 +76,8 @@ void Server::nick(std::string buf, int fd)
 		send(fd, "Invalid nickname.\r\n", 19, 0);
 		return;
 	}
-	std::string nick = buf.substr(buf.find("NICK")+5);
+	std::string nick = buf.substr(buf.find("NICK ")+5);
+	nick = nick.substr(nick.find_first_not_of(' '));
 	nick = nick.substr(0, nick.find('\n'));
 	nick = nick.substr(0, nick.find('\r'));
 	std::cout << BLUE"nick: " << nick << "|" RESET << std::endl;
@@ -103,7 +105,8 @@ void Server::user(std::string buf, int fd)
 		send(fd, "Invalid username.\r\n", 19, 0);
 		return;
 	}
-	std::string user = buf.substr(buf.find("USER")+5);
+	std::string user = buf.substr(buf.find("USER ")+5);
+	user = user.substr(user.find_first_not_of(' '));
 	user = user.substr(0, user.find('\n'));
 	user = user.substr(0, user.find('\r'));
 	std::cout << BLUE"user: " << user << "|" RESET << std::endl;
@@ -258,7 +261,9 @@ void Server::msg(std::string buf, int fd)
 	else // Private message
 	{
 		std::string receiver = buf.substr(8);
+		receiver = receiver.substr(receiver.find_first_not_of(' '));
 		receiver = receiver.substr(0, receiver.find(' '));
+		std::cout << BLUE"Receiver: " << receiver << "\n" RESET;
 		for (std::map<int, User>::iterator it = users.begin(); it != users.end(); ++it)
 		{
 			if (it->second.getNickName() == receiver)
@@ -303,6 +308,7 @@ void Server::notice(std::string buf, int fd)
 	else // Private message
 	{
 		std::string receiver = buf.substr(7);
+		receiver = receiver.substr(receiver.find_first_not_of(' '));
 		receiver = receiver.substr(0, receiver.find(' '));
 		std::cout << BLUE"Receiver: " << receiver << "\n" RESET;
 		for (std::map<int, User>::iterator it = users.begin(); it != users.end(); ++it)
@@ -348,7 +354,7 @@ void Server::part(std::string buf, int fd)
 void Server::oper(std::string buf, int fd)
 {
     std::string target = buf.substr(buf.find("OPER") + 5);
-    std::string input_pass = target.substr(target.find(' ') + 1);
+    std::string input_pass = target.substr(target.find_first_not_of(' '));
     input_pass = input_pass.substr(0, input_pass.find("\r\n"));
     target = target.substr(0, target.find(' '));
 
@@ -373,9 +379,9 @@ void Server::oper(std::string buf, int fd)
 void Server::kick(std::string buf, int fd)
 {
     std::string channel_name = buf.substr(buf.find('#'));
-    std::string target_user = channel_name.substr(channel_name.find(' ') + 1);
+    std::string target_user = channel_name.substr(channel_name.find_first_not_of(' '));
     target_user = target_user.substr(0, target_user.find("\r\n"));
-    channel_name = channel_name.substr(0, channel_name.find(' '));
+    channel_name = channel_name.substr(channel_name.find_first_not_of(' '));
 
     for (size_t i = 0; i < getChannels().size(); i++)
     {
@@ -413,9 +419,9 @@ void Server::kick(std::string buf, int fd)
 void Server::invite(std::string buf, int fd)
 {
 	std::string target_user = buf.substr(buf.find("INVITE") + 7);
-	std::string channel_name = target_user.substr(target_user.find(' ') + 1);
+	std::string channel_name = target_user.substr(target_user.find_first_not_of(' '));
 	channel_name = channel_name.substr(0, channel_name.find("\r\n"));
-	target_user = target_user.substr(0, target_user.find(' '));
+	target_user = target_user.substr(0, target_user.find_first_not_of(' '));
 
 	std::cout << BLUE"target user: " << target_user << "|\n" RESET;
 	std::cout << BLUE"channel name: " << channel_name << "|\n" RESET;
@@ -507,7 +513,7 @@ void Server::mode(std::string buf, int fd)
 	std::cout << BLUE"target: " << target << "|\n" RESET;
 	std::cout << BLUE"mode: " << mode << "|\n" RESET;
 
-	size_t i;
+	size_t i = 0;
 	if (target.find('#') != std::string::npos)
 		for (i = 0; i < getChannels().size(); i++)
 			if (getChannels()[i].getName() == target)
@@ -536,17 +542,17 @@ void Server::mode(std::string buf, int fd)
 	{
 		if (isInVector(getChannels()[i].getOps(), fd) || isInVector(server_ops, fd))
 		{
-			std::string mode_arg = mode.substr(mode.find(' ') + 1, mode.find("\r\n") - mode.find(' '));
+			std::string mode_arg = mode.substr(mode.find_first_not_of(' '), mode.find("\r\n") - mode.find_first_not_of(' '));
 			std::cout << BLUE"mode_arg: " << mode_arg << "|\n" RESET;
-			if (mode.find("+i") != std::string::npos)
+			if (mode.find("+i ") != std::string::npos)
 				getChannels()[i].changeInviteMode(true);
-			else if (mode.find("-i") != std::string::npos)
+			else if (mode.find("-i ") != std::string::npos)
 				getChannels()[i].changeInviteMode(false);
-			else if (mode.find("+t") != std::string::npos)
+			else if (mode.find("+t ") != std::string::npos)
 				getChannels()[i].changeTopicMode(true);
-			else if (mode.find("-t") != std::string::npos)
+			else if (mode.find("-t ") != std::string::npos)
 				getChannels()[i].changeTopicMode(false);
-			else if (mode.find("+k") != std::string::npos)
+			else if (mode.find("+k ") != std::string::npos)
 			{
 				getChannels()[i].changeKeyMode(true);
 				if (!mode_arg.empty() && validate_input((char *)"4242", (char *)mode_arg.c_str()))
@@ -558,12 +564,13 @@ void Server::mode(std::string buf, int fd)
 					return;
 				}
 			}
-			else if (mode.find("-k") != std::string::npos)
+			else if (mode.find("-k ") != std::string::npos)
 				getChannels()[i].changeKeyMode(false);
-			else if (mode.find("+l") != std::string::npos)
+			else if (mode.find("+l ") != std::string::npos)
 			{
 				if (!mode_arg.empty())
 				{
+					mode_arg = mode_arg.substr(mode_arg.find_first_not_of(' '), mode_arg.find("\r\n") - mode_arg.find_first_not_of(' '));
 					int numerical_arg = std::atoi(mode_arg.c_str());
 					if (numerical_arg > 0 && numerical_arg < 100)
 						getChannels()[i].changeMemberLimit(numerical_arg);
@@ -581,9 +588,9 @@ void Server::mode(std::string buf, int fd)
 					return;
 				}
 			}
-			else if (mode.find("-l") != std::string::npos)
+			else if (mode.find("-l ") != std::string::npos)
 				getChannels()[i].changeMemberLimit(false);
-			else if (mode.find("+o") != std::string::npos)
+			else if (mode.find("+o ") != std::string::npos)
 			{
 				if (!mode_arg.empty())
 					getChannels()[i].addOp(clientFd(mode_arg));
@@ -594,7 +601,7 @@ void Server::mode(std::string buf, int fd)
 					return;
 				}
 			}
-			else if (mode.find("-o") != std::string::npos)
+			else if (mode.find("-o ") != std::string::npos)
 				getChannels()[i].removeOp(clientFd(mode_arg));
 			return;
 		}
