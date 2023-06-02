@@ -41,18 +41,18 @@ public:
 		bool validateNickUser(std::string &name, int client_fd, int flag);
 	// Commands
 		void commands(std::string buf, int fd);
-		void pass(std::string buf, int fd);
-		void nick(std::string buf, int fd);
-		void user(std::string buf, int fd);
-		void join(std::string buf, int fd);
-		void msg(std::string buf, int fd);
-		void notice(std::string buf, int fd);
-		void part(std::string buf, int fd);
-        void oper(std::string buf, int fd);
-        void kick(std::string buf, int fd);
-        void invite(std::string buf, int fd);
-        void topic(std::string buf, int fd);
-		void mode(std::string buf, int fd);
+		int pass(std::string buf, int fd);
+		int nick(std::string buf, int fd);
+		int user(std::string buf, int fd);
+		int join(std::string buf, int fd);
+		int msg(std::string buf, int fd);
+		int notice(std::string buf, int fd);
+		int part(std::string buf, int fd);
+        int oper(std::string buf, int fd);
+        int kick(std::string buf, int fd);
+        int invite(std::string buf, int fd);
+        int topic(std::string buf, int fd);
+		int mode(std::string buf, int fd);
 	// Signals
 		static void ctrlc(int sig);
 	// Run server

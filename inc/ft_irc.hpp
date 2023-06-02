@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstring>
 #include <cstdlib>
 #include <cerrno>
@@ -25,8 +26,8 @@
 #include <csignal>
 
 #include "Server.hpp"
-#include "User.hpp"
 #include "Channel.hpp"
+#include "User.hpp"
 
 #define GREEN "\033[32m"
 #define RED "\033[31m"
@@ -38,11 +39,12 @@
 
 class Server;
 class Channel;
-//class User;
+class User;
 
 bool isInVector(const std::vector<int>& vec, int target);
 bool validate_input(char *port, char *password);
 bool validate_password(std::string const &password);
 void sigHandler();
+int countWords(const std::string& str);
 
 #endif //FT_IRC_HPP
