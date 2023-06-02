@@ -353,7 +353,6 @@ int Server::msg(std::string buf, int fd)
 						std::cout << BLUE"Sending message to " << users[it->second].getNickName() << "\n" RESET;
 						std::string msg = ":" + users[fd].getNickName() + " PRIVMSG " + channel_name + " :" + message + "\r\n";
 						send(it->second, msg.c_str(), msg.length(), 0);
-						return 0;
 					}
 				}
 				return 0;
@@ -441,7 +440,7 @@ int Server::part(std::string buf, int fd)
 {
 	std::string channel_name = buf.substr(buf.find('#'));
 	channel_name = channel_name.substr(0, channel_name.find(' '));
-	if (countWords(buf) != 2)
+	if (countWords(buf) != 3)
 		return -1;
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
@@ -498,9 +497,13 @@ int Server::oper(std::string buf, int fd)
 int Server::kick(std::string buf, int fd)
 {
     std::string channel_name = buf.substr(buf.find('#'));
-    std::string target_user = channel_name.substr(channel_name.find_first_not_of(' '));
-    target_user = target_user.substr(0, target_user.find("\r\n"));
-    channel_name = channel_name.substr(channel_name.find_first_not_of(' '));
+    std::string target_user = channel_name.substr(channel_name.find(' '));
+    target_user = target_user.substr(target_user.find_first_not_of(' '), target_user.find('\n'));
+	target_user = target_user.substr(0, target_user.find('\r'));
+    channel_name = channel_name.substr(0, channel_name.find(' '));
+
+	std::cout << GREEN"channel_name: " << channel_name << "|\n" RESET;
+	std::cout << BLUE"target_user: " << target_user << "|\n" RESET;
 
     for (size_t i = 0; i < getChannels().size(); i++)
     {
@@ -541,9 +544,9 @@ int Server::invite(std::string buf, int fd)
 	if (countWords(buf) != 3)
 		return -1;
 	std::string target_user = buf.substr(buf.find("INVITE") + 7);
-	std::string channel_name = target_user.substr(target_user.find_first_not_of(' '));
+	std::string channel_name = target_user.substr(target_user.find('#'));
 	channel_name = channel_name.substr(0, channel_name.find("\r\n"));
-	target_user = target_user.substr(0, target_user.find_first_not_of(' '));
+	target_user = target_user.substr(0, target_user.find(' '));
 
 	std::cout << BLUE"target user: " << target_user << "|\n" RESET;
 	std::cout << BLUE"channel name: " << channel_name << "|\n" RESET;
