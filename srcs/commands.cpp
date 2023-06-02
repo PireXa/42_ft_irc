@@ -337,8 +337,6 @@ int Server::msg(std::string buf, int fd)
 	message = message.substr(0, message.find('\n'));
 	std::cout << BLUE"Message: " << message << "\n" RESET;
 
-	if (countWords(buf) != 3)
-		return -1;
 	if (buf[8] == '#') // Channel message
 	{
 		std::string channel_name = buf.substr(buf.find('#'));
@@ -360,6 +358,8 @@ int Server::msg(std::string buf, int fd)
 				return 0;
 			}
 		}
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + channel_name + " :No such nick/channel\r\n";
+		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	else // Private message
 	{
@@ -377,6 +377,8 @@ int Server::msg(std::string buf, int fd)
 				return 0;
 			}
 		}
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + receiver + " :No such nick/channel\r\n";
+		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	return 0;
 }
@@ -387,8 +389,6 @@ int Server::notice(std::string buf, int fd)
 	message = message.substr(0, message.find('\n'));
 	std::cout << BLUE"Notice: " << message << "\n" RESET;
 
-	if (countWords(buf) != 3)
-		return -1;
 	if (buf[7] == '#') // Channel message
 	{
 		std::string channel_name = buf.substr(buf.find('#'));
@@ -410,6 +410,8 @@ int Server::notice(std::string buf, int fd)
 				return 0;
 			}
 		}
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + channel_name + " :No such nick/channel\r\n";
+		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	else // Private message
 	{
@@ -427,6 +429,8 @@ int Server::notice(std::string buf, int fd)
 				return 0;
 			}
 		}
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + receiver + " :No such nick/channel\r\n";
+		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	return 0;
 }
@@ -491,8 +495,6 @@ int Server::oper(std::string buf, int fd)
 
 int Server::kick(std::string buf, int fd)
 {
-	if (countWords(buf) != 3 && countWords(buf) != 4)
-		return -1;
     std::string channel_name = buf.substr(buf.find('#'));
     std::string target_user = channel_name.substr(channel_name.find_first_not_of(' '));
     target_user = target_user.substr(0, target_user.find("\r\n"));
@@ -569,8 +571,6 @@ int Server::invite(std::string buf, int fd)
 
 int Server::topic(std::string buf, int fd)
 {
-	if (countWords(buf) != 2 && countWords(buf) != 3)
-		return -1;
 	std::string channel_name = buf.substr(buf.find("TOPIC") + 6);
 	std::string topic;
 	if (channel_name.find(':') != std::string::npos)
@@ -612,8 +612,6 @@ int Server::topic(std::string buf, int fd)
 
 int Server::mode(std::string buf, int fd)
 {
-	if (countWords(buf) != 2 && countWords(buf) != 3 && countWords(buf) != 4)
-		return -1;
 	std::string target = buf.substr(buf.find("MODE") + 5);
 	std::string mode;
 	if (target.find(" +") != std::string::npos || target.find(" -") != std::string::npos)
