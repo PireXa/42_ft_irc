@@ -353,6 +353,7 @@ int Server::msg(std::string buf, int fd)
 						std::cout << BLUE"Sending message to " << users[it->second].getNickName() << "\n" RESET;
 						std::string msg = ":" + users[fd].getNickName() + " PRIVMSG " + channel_name + " :" + message + "\r\n";
 						send(it->second, msg.c_str(), msg.length(), 0);
+						return 0;
 					}
 				}
 				return 0;
@@ -366,7 +367,7 @@ int Server::msg(std::string buf, int fd)
 		std::string receiver = buf.substr(8);
 		receiver = receiver.substr(receiver.find_first_not_of(' '));
 		receiver = receiver.substr(0, receiver.find(' '));
-		std::cout << BLUE"Receiver: " << receiver << "\n" RESET;
+		std::cout << BLUE"Receiver: " << receiver << "|\n" RESET;
 		for (std::map<int, User>::iterator it = users.begin(); it != users.end(); ++it)
 		{
 			if (it->second.getNickName() == receiver)
@@ -377,6 +378,7 @@ int Server::msg(std::string buf, int fd)
 				return 0;
 			}
 		}
+		std::cout << BLUE"Sending message to " << receiver << "\n" RESET;
 		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + receiver + " :No such nick/channel\r\n";
 		send(fd, no_target.c_str(), no_target.length(), 0);
 	}

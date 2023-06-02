@@ -46,7 +46,7 @@ void Server::setUSER(int fd)
 	user = user.substr(0, user.find(' '));
 	if (validateNickUser(user, fd, 1))
 	{
-		getUsers()[fd].setNickName(user);
+		getUsers()[fd].setUserName(user);
 		users[fd].setAuthenticated('1', 2);
 	}
 }
