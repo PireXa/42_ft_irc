@@ -668,15 +668,15 @@ int Server::mode(std::string buf, int fd)
 		{
 			std::string mode_arg = mode.substr(mode.find_first_not_of(' '), mode.find("\r\n") - mode.find_first_not_of(' '));
 			std::cout << BLUE"mode_arg: " << mode_arg << "|\n" RESET;
-			if (mode.find("+i ") != std::string::npos)
+			if (mode == "+i")
 				getChannels()[i].changeInviteMode(true);
-			else if (mode.find("-i ") != std::string::npos)
+			else if (mode == "-i")
 				getChannels()[i].changeInviteMode(false);
-			else if (mode.find("+t ") != std::string::npos)
+			else if (mode == "+t")
 				getChannels()[i].changeTopicMode(true);
-			else if (mode.find("-t ") != std::string::npos)
+			else if (mode == "-t")
 				getChannels()[i].changeTopicMode(false);
-			else if (mode.find("+k ") != std::string::npos)
+			else if (mode == "+k")
 			{
 				getChannels()[i].changeKeyMode(true);
 				if (!mode_arg.empty() && validate_input((char *)"4242", (char *)mode_arg.c_str()))
@@ -688,9 +688,9 @@ int Server::mode(std::string buf, int fd)
 					return 0;
 				}
 			}
-			else if (mode.find("-k ") != std::string::npos)
+			else if (mode == "-k")
 				getChannels()[i].changeKeyMode(false);
-			else if (mode.find("+l ") != std::string::npos)
+			else if (mode.find("+l") != std::string::npos)
 			{
 				if (!mode_arg.empty())
 				{
@@ -712,9 +712,9 @@ int Server::mode(std::string buf, int fd)
 					return 0;
 				}
 			}
-			else if (mode.find("-l ") != std::string::npos)
+			else if (mode == "-l")
 				getChannels()[i].changeMemberLimit(false);
-			else if (mode.find("+o ") != std::string::npos)
+			else if (mode == "+o")
 			{
 				if (!mode_arg.empty())
 					getChannels()[i].addOp(clientFd(mode_arg));
@@ -725,7 +725,7 @@ int Server::mode(std::string buf, int fd)
 					return 0;
 				}
 			}
-			else if (mode.find("-o ") != std::string::npos)
+			else if (mode == "-o")
 				getChannels()[i].removeOp(clientFd(mode_arg));
 			return 0;
 		}
