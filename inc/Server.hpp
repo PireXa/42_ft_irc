@@ -41,18 +41,18 @@ public:
 		bool validateNickUser(std::string &name, int client_fd, int flag);
 	// Commands
 		void commands(std::string buf, int fd);
-		int pass(std::string buf, int fd);
-		int nick(std::string buf, int fd);
-		int user(std::string buf, int fd);
-		int join(std::string buf, int fd);
-		int msg(std::string buf, int fd);
-		int notice(std::string buf, int fd);
-		int part(std::string buf, int fd);
-        int oper(std::string buf, int fd);
-        int kick(std::string buf, int fd);
-        int invite(std::string buf, int fd);
-        int topic(std::string buf, int fd);
-		int mode(std::string buf, int fd);
+		int pass(std::vector<std::string> blocks, int fd);
+		int nick(std::vector<std::string> blocks, int fd);
+		int user(std::vector<std::string> blocks, int fd);
+		int join(std::vector<std::string> blocks, int fd);
+		int msg(std::vector<std::string> blocks, int fd);
+		int notice(std::vector<std::string> blocks, int fd);
+		int part(std::vector<std::string> blocks, int fd);
+        int oper(std::vector<std::string> blocks, int fd);
+        int kick(std::vector<std::string> blocks, int fd);
+        int invite(std::vector<std::string> blocks, int fd);
+        int topic(std::vector<std::string> blocks, int fd);
+		int mode(std::vector<std::string> blocks, int fd);
 	// Signals
 		static void ctrlc(int sig);
 	// Run server

@@ -8,136 +8,169 @@ void Server::commands(std::string buffer, int client_fd)
 {
 	if (buffer[0] == '\n' || buffer[0] == '\r')
 		return;
-	if (buffer.substr(0, 5) == ("PASS "))
+	std::stringstream ss(buffer);
+	std::vector<std::string> blocks;
+	std::string block;
+
+	while (ss >> block)
 	{
-		if (pass(buffer, client_fd) == -1)
+		if (block[0] == ':' && !blocks[0].empty())
+		{
+			blocks.push_back(buffer.substr(buffer.find(':')));
+			break;
+		}
+		blocks.push_back(block);
+	}
+	for (size_t i = 0; i < blocks.size(); i++)
+		std::cout << "blocks[" << i << "]: " << blocks[i] << std::endl;
+	if (blocks[0] == "PASS")
+	{
+		if (pass(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct PASS format: PASS <password>\r\n", 48, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
 	else if (users[client_fd].getPassAuth() == '0') // If password is not authenticated
 	{
 		send(client_fd, "\nerror: introduce password first.\r\n", 35, 0);
+		send(client_fd, "\n", 1, 0);
 		return;
 	}
-	else if (buffer.substr(0, 5) == ("NICK "))
+	else if (blocks[0] == "NICK")
 	{
-		if (nick(buffer, client_fd) == -1)
+		if (nick(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct NICK format: NICK <nickname>\r\n", 48, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 5) == ("USER "))
+	else if (blocks[0] == "USER")
 	{
-		if (user(buffer, client_fd) == -1)
+		if (user(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct USER format: USER <username> <hostname> <servername> :<realname>\r\n", 84, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
 	else if (!users[client_fd].isAuthenticated()) // If user is not authenticated
 	{
 		send(client_fd, "\nerror: not authenticated.\n", 26, 0);
+		send(client_fd, "\n", 1, 0);
 		return;
 	}
-	else if (buffer.substr(0, 5) == ("JOIN "))
+	else if (blocks[0] == "JOIN")
 	{
-		if (join(buffer, client_fd) == -1)
+		if (join(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct JOIN format: JOIN <#channel>\r\n", 48, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 8) == ("PRIVMSG "))
+	else if (blocks[0] == "PRIVMSG")
 	{
-		if(msg(buffer, client_fd) == -1)
+		if(msg(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct PRIVMSG format: PRIVMSG <#channel/nickname> :<message>\r\n", 75, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 7) == "NOTICE ")
+	else if (blocks[0] == "NOTICE")
 	{
-		if(notice(buffer, client_fd) == -1)
+		if(notice(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct NOTICE format: NOTICE <#channel/nickname> :<message>\r\n", 75, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 5) == ("PART "))
+	else if (blocks[0] == "PART")
 	{
-		if(part(buffer, client_fd) == -1)
+		if(part(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct PART format: PART <#channel>\r\n", 48, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 5) == ("OPER "))
+	else if (blocks[0] == "OPER")
 	{
-		if(oper(buffer, client_fd) == -1)
+		if(oper(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct OPER format: OPER <password>\r\n", 48, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 5) == ("KICK "))
+	else if (blocks[0] == "KICK")
 	{
-		if(kick(buffer, client_fd) == -1)
+		if(kick(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct KICK format: KICK <#channel> <nickname>\r\n", 59, 0);
 			send (client_fd, "error: correct KICK format: KICK <#channel> <nickname> :<comment>\r\n", 69, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 7) == ("INVITE "))
+	else if (blocks[0] == "INVITE")
 	{
-		if(invite(buffer, client_fd) == -1)
+		if(invite(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct INVITE format: INVITE <nickname> <#channel>\r\n", 63, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 6) == ("TOPIC "))
+	else if (blocks[0] == "TOPIC")
 	{
-		if(topic(buffer, client_fd) == -1)
+		if(topic(blocks, client_fd) == -1)
 		{
 			send(client_fd, "\nerror: correct TOPIC format: TOPIC <#channel> :<topic>\r\n", 59, 0);
-			send (client_fd, "error: correct TOPIC format: TOPIC <#channel>\r\n", 47, 0);
+			send (client_fd, "\nerror: correct TOPIC format: TOPIC <#channel>\r\n", 47, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
-	else if (buffer.substr(0, 5) == ("MODE "))
+	else if (blocks[0] == "MODE")
 	{
-		if(mode(buffer, client_fd) == -1)
+		if(mode(blocks, client_fd) == -1)
 		{
-			send(client_fd, "\nerror: correct MODE format: MODE <#channel> <mode>\r\n", 55, 0);
-			send(client_fd, "error: correct MODE format: MODE <#channel> <mode> <nickname>\r\n", 65, 0);
+			// Display info about MODE
 			send(client_fd, "error: correct MODE format: MODE <nickname>\r\n", 45, 0);
-			send (client_fd, "error: correct MODE format: MODE <mode> <nickname>\r\n", 55, 0);
+			send(client_fd, "error: correct MODE format: MODE <#channel>\r\n", 45, 0);
+			// Change mode of channel
+			send(client_fd, "error: correct MODE format: MODE <#channel> <mode>\r\n", 52, 0);
+			// Change mode of user on channel
+			send(client_fd, "error: correct MODE format: MODE <#channel> <mode> <nickname>\r\n", 63, 0);
+			send(client_fd, "error: correct MODE format: MODE <#channel> <mode> <argument>\r\n", 63, 0);
+			send(client_fd, "\n", 1, 0);
 			return;
 		}
 	}
 	else
-		send(client_fd, "\nerror: command not found.\n", 27, 0);
+	{
+		std::cout << RED"error: command not found: " RESET << buffer <<std::endl;
+		send(client_fd, "\nerror: command not found.\r\n", 27, 0);
+		send(client_fd, "\n",1, 0);
+	}
 }
 
-int Server::pass(std::string buf, int fd)
+int Server::pass(std::vector<std::string> blocks, int fd)
 {
-	std::string pass = buf.substr(buf.find("PASS ") + 5);
-	pass = pass.substr(pass.find_first_not_of(' '));
-	pass = pass.substr(0, pass.find('\n'));
-	pass = pass.substr(0, pass.find('\r'));
-	std::cout << BLUE"pass: " RESET<< pass << std::endl;
+	if (blocks.size() != 2)
+		return -1;
 	if (users[fd].getPassAuth() == '1')
 	{
 		send(fd, "Password already set.\r\n", 24, 0);
 		return 0;
 	}
-	if (countWords(buf) != 2)
-		return -1;
-	if (pass == password)
+	std::cout << BLUE"pass: " RESET<< blocks[1] << std::endl;
+	if (blocks[1] == password)
 	{
 		users[fd].setAuthenticated('1', 0);
 		send(fd, "Password correct.\r\n", 19, 0);
@@ -150,23 +183,14 @@ int Server::pass(std::string buf, int fd)
 	}
 }
 
-int Server::nick(std::string buf, int fd)
+int Server::nick(std::vector<std::string> blocks, int fd)
 {
-	if (buf[4] == '\n' || buf[4] == '\r' || buf[4] != ' ')
-	{
-		send(fd, "Invalid nickname.\r\n", 19, 0);
-		return 0;
-	}
-	if (countWords(buf) != 5)
+	if (blocks.size() != 2)
 		return -1;
-	std::string nick = buf.substr(buf.find("NICK ")+5);
-	nick = nick.substr(nick.find_first_not_of(' '));
-	nick = nick.substr(0, nick.find('\n'));
-	nick = nick.substr(0, nick.find('\r'));
-	std::cout << BLUE"nick: " << nick << "|" RESET << std::endl;
-	if (!validateNickUser(nick, fd, 0))
+	std::cout << BLUE"nick: " RESET << blocks[1] << std::endl;
+	if (!validateNickUser(blocks[1], fd, 0))
 		return 0;
-	users[fd].setNickName(nick);
+	users[fd].setNickName(blocks[1]);
 	users[fd].setAuthenticated('1', 1);
 	send(fd, "Your nickname has been set.\r\n", 29, 0);
 	if (users[fd].isAuthenticated() && !users[fd].getAuthCount())
@@ -177,40 +201,23 @@ int Server::nick(std::string buf, int fd)
 	return 0;
 }
 
-int Server::user(std::string buf, int fd)
+int Server::user(std::vector<std::string> blocks, int fd)
 {
 	if (users[fd].getUserAuth() == '1')
 	{
 		send(fd, "User already set.\r\n", 19, 0);
 		return 0;
 	}
-	if (countWords(buf) != 5)
+	if (blocks.size() != 5)
 		return -1;
-	std::string user = buf.substr(buf.find("USER ")+5);
-	std::cout << BLUE"user: " << user << "|" RESET << std::endl;
-	std::string hostname = user.substr(user.find(' ')+1);
-	hostname = hostname.substr(hostname.find_first_not_of(' '));
-	std::string servername = hostname.substr(hostname.find(' ')+1);
-	servername = servername.substr(servername.find_first_not_of(' '));
-	if (servername.find(':') == std::string::npos)
+	std::cout << BLUE"user: " RESET << blocks[1] << std::endl;
+	if (blocks[4][0] != ':')
 		return -1;
 	else
-	{
-		std::string realname = servername.substr(0, servername.find(':')+1);
-		realname = realname.substr(0, realname.find('\n'));
-		realname = realname.substr(0, realname.find('\r'));
-	}
-	servername = servername.substr(0, servername.find(' '));
-	if (servername.empty())
-		return -1;
-	hostname = hostname.substr(0, hostname.find(' '));
-	if (hostname.empty())
-		return -1;
-	user = user.substr(0, user.find(' '));
-	std::cout << BLUE"user: " << user << "|" RESET << std::endl;
-	if (!validateNickUser(user, fd, 1))
+		blocks[4] = blocks[4].substr(1);
+	if (!validateNickUser(blocks[1], fd, 1))
 		return 0;
-	users[fd].setUserName(user);
+	users[fd].setUserName(blocks[1]);
 	users[fd].setAuthenticated('1', 2);
 	send(fd, "Your username has been set.\r\n", 29, 0);
 	if (users[fd].isAuthenticated() && !users[fd].getAuthCount())
@@ -221,35 +228,23 @@ int Server::user(std::string buf, int fd)
 	return 0;
 }
 
-int Server::join(std::string buf, int client_fd)
+int Server::join(std::vector<std::string> blocks, int client_fd)
 {
-	std::string channel_name;
 	std::string input_key;
 
-	if (countWords(buf) != 2)
+	if (blocks.size() < 2)
 		return -1;
-	if (buf.find('#') != std::string::npos)
-	{
-		channel_name = buf.substr(buf.find('#'));
-		channel_name = channel_name.substr(0, channel_name.find('\n'));
-		channel_name = channel_name.substr(0, channel_name.find('\r'));
-		if (channel_name.find(' ') != std::string::npos)
-		{
-			input_key = (channel_name.substr(channel_name.find(' ') + 1));
-			input_key = input_key.substr(0, input_key.find('\n'));
-			input_key = input_key.substr(0, input_key.find('\r'));
-			channel_name = channel_name.substr(0, channel_name.find(' '));
-		}
-		std::cout << BLUE"CHANNEL_NAME: " << channel_name << "|" RESET << std::endl;
-	}
-	else
+    if (blocks[1][0] != '#')
 	{
 		send(client_fd, "error on command\r\n", 18, 0);
+		send(client_fd, "\n",1, 0);
 		return 0;
 	}
+	if (blocks.size() == 3)
+		input_key = blocks[2];
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
-		if (getChannels()[i].getName() == channel_name) // CHANNEL ALREADY EXISTS --------------------------------------
+		if (getChannels()[i].getName() == blocks[1]) // CHANNEL ALREADY EXISTS --------------------------------------
 		{
 			std::cout << GREEN"Channel already exists\n" RESET;
 			if (getChannels()[i].getUsers().find(users[client_fd].getNickName()) != getChannels()[i].getUsers().end())
@@ -278,8 +273,8 @@ int Server::join(std::string buf, int client_fd)
 			}
 			getChannels()[i].addMember(users[client_fd].getNickName(), client_fd);
 			std::string welcomeMessage = ":localhost 001 " + users[client_fd].getNickName() + " :Welcome to the IRC server\r\n";
-			std::string topicMessage = ":localhost 332 " + users[client_fd].getNickName() + " " + channel_name + " :" + getChannels()[i].getTopic() + "\r\n";
-			std::string namesReplyMessage = ":localhost 353 " + users[client_fd].getNickName() + " = " + channel_name + " :";
+			std::string topicMessage = ":localhost 332 " + users[client_fd].getNickName() + " " + blocks[1] + " :" + getChannels()[i].getTopic() + "\r\n";
+			std::string namesReplyMessage = ":localhost 353 " + users[client_fd].getNickName() + " = " + blocks[1] + " :";
 			for (std::map<std::string, int>::iterator j = getChannels()[i].getUsers().begin(); j != getChannels()[i].getUsers().end(); j++)
 			{
 				namesReplyMessage += j->first;
@@ -287,29 +282,29 @@ int Server::join(std::string buf, int client_fd)
 					namesReplyMessage += " ";
 			}
 			namesReplyMessage += "\r\n";
-			std::string endOfNamesMessage = ":localhost 366 "+ users[client_fd].getNickName() + channel_name + " :End of /NAMES list\r\n";
-			std::string joinMessage = ":" + users[client_fd].getNickName() + " JOIN " + channel_name + "\r\n";
+			std::string endOfNamesMessage = ":localhost 366 "+ users[client_fd].getNickName() + blocks[1] + " :End of /NAMES list\r\n";
+			std::string joinMessage = ":" + users[client_fd].getNickName() + " JOIN " + blocks[1] + "\r\n";
 			send(client_fd, welcomeMessage.c_str(),welcomeMessage.length(), 0);
 			send(client_fd, topicMessage.c_str(), topicMessage.length(),0);
 			send(client_fd, namesReplyMessage.c_str(),namesReplyMessage.length(), 0);
 			send(client_fd, endOfNamesMessage.c_str(), endOfNamesMessage.length(), 0);
 			send(client_fd, joinMessage.c_str(), joinMessage.length(), 0);
-            users[client_fd].addChannel(channel_name);
+            users[client_fd].addChannel(blocks[1]);
 			return 0;
 		}
 	}
 	std::cout << GREEN"Channel not found, creating new channel\n" RESET; // NEW CHANNEL -------------------------------------------
-	getChannels().push_back(Channel(channel_name, "Welcome to " + channel_name + "!"));
+	getChannels().push_back(Channel(blocks[1], "Welcome to " + blocks[1] + "!"));
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
-		if (getChannels()[i].getName() == channel_name)
+		if (getChannels()[i].getName() == blocks[1])
 		{
 			getChannels()[i].addMember(users[client_fd].getNickName(), client_fd);
             getChannels()[i].addOp(client_fd);
 			server_ops.push_back(client_fd);
 			std::string welcomeMessage = ":localhost 001 " + users[client_fd].getNickName() + " :Welcome to the IRC server\r\n";
-			std::string topicMessage = ":localhost 332 " + users[client_fd].getNickName() + " " + channel_name + " :" + getChannels()[i].getTopic() + "\r\n";
-			std::string namesReplyMessage = ":localhost 353 " + users[client_fd].getNickName() + " = " + channel_name + " :";
+			std::string topicMessage = ":localhost 332 " + users[client_fd].getNickName() + " " + blocks[1] + " :" + getChannels()[i].getTopic() + "\r\n";
+			std::string namesReplyMessage = ":localhost 353 " + users[client_fd].getNickName() + " = " + blocks[1] + " :";
 			for (std::map<std::string, int>::iterator j = getChannels()[i].getUsers().begin(); j != getChannels()[i].getUsers().end(); j++)
 			{
 				namesReplyMessage += j->first;
@@ -317,86 +312,105 @@ int Server::join(std::string buf, int client_fd)
 					namesReplyMessage += " ";
 			}
 			namesReplyMessage += "\r\n";
-			std::string endOfNamesMessage = ":localhost 366 "+ users[client_fd].getNickName() + channel_name + " :End of /NAMES list\r\n";
-			std::string joinMessage = ":" + users[client_fd].getNickName() + " JOIN " + channel_name + "\r\n";
+			std::string endOfNamesMessage = ":localhost 366 "+ users[client_fd].getNickName() + blocks[1] + " :End of /NAMES list\r\n";
+			std::string joinMessage = ":" + users[client_fd].getNickName() + " JOIN " + blocks[1] + "\r\n";
 			send(client_fd, welcomeMessage.c_str(),welcomeMessage.length(), 0);
 			send(client_fd, topicMessage.c_str(), topicMessage.length(),0);
 			send(client_fd, namesReplyMessage.c_str(),namesReplyMessage.length(), 0);
 			send(client_fd, endOfNamesMessage.c_str(), endOfNamesMessage.length(), 0);
 			send(client_fd, joinMessage.c_str(), joinMessage.length(), 0);
-            users[client_fd].addChannel(channel_name);
+            users[client_fd].addChannel(blocks[1]);
 			return 0;
 		}
 	}
 	return 0;
 }
 
-int Server::msg(std::string buf, int fd)
+int Server::msg(std::vector<std::string> blocks, int fd)
 {
-	std::string message = buf.substr(buf.find(':') + 1);
-	message = message.substr(0, message.find('\n'));
-	std::cout << BLUE"Message: " << message << "\n" RESET;
-
-	if (buf[8] == '#') // Channel message
+	if (blocks.size() < 3)
+		return -1;
+	std::stringstream message_stream;
+	if (blocks[2][0] != ':')
+		return -1;
+	else
 	{
-		std::string channel_name = buf.substr(buf.find('#'));
-		channel_name = channel_name.substr(0, channel_name.find(" "));
+		blocks[2] = blocks[2].substr(1);
+		for (size_t i = 2; i < blocks.size(); i++)
+		{
+			message_stream  << blocks[i];
+			if (i != blocks.size() - 1)
+				message_stream << " ";
+		}
+	}
+	std::cout << BLUE"Message: " RESET<< message_stream.str() << "\n" ;
+	if (blocks[1][0] == '#') // Channel message
+	{
 		for (size_t i = 0; i < getChannels().size(); i++)
 		{
-			if (getChannels()[i].getName() == channel_name)
+			if (getChannels()[i].getName() == blocks[1])
 			{
 				for (std::map<std::string, int>::const_iterator it = getChannels()[i].getUsers().begin();
 					 it != getChannels()[i].getUsers().end(); ++it)
 				{
 					if (it->second != fd)
 					{
-						std::cout << BLUE"Sending message to " << users[it->second].getNickName() << "\n" RESET;
-						std::string msg = ":" + users[fd].getNickName() + " PRIVMSG " + channel_name + " :" + message + "\r\n";
+						std::cout << BLUE"Sending message to " RESET << users[it->second].getNickName() << "\n";
+						std::cout << BLUE"Message: " RESET<< message_stream.str() << "\n" ;
+						std::string message = message_stream.str();
+						std::string msg = ":" + users[fd].getNickName() + " PRIVMSG " + blocks[1] + " :" + message + "\r\n";
 						send(it->second, msg.c_str(), msg.length(), 0);
 					}
 				}
 				return 0;
 			}
 		}
-		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + channel_name + " :No such nick/channel\r\n";
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + blocks[1] + " :No such nick/channel\r\n";
 		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	else // Private message
 	{
-		std::string receiver = buf.substr(8);
-		receiver = receiver.substr(receiver.find_first_not_of(' '));
-		receiver = receiver.substr(0, receiver.find(' '));
-		std::cout << BLUE"Receiver: " << receiver << "|\n" RESET;
+		std::cout << BLUE"Receiver: " << blocks[1] << "|\n" RESET;
 		for (std::map<int, User>::iterator it = users.begin(); it != users.end(); ++it)
 		{
-			if (it->second.getNickName() == receiver)
+			if (it->second.getNickName() == blocks[1])
 			{
 				std::cout << BLUE"Sending message to " << users[it->first].getNickName() << "\n" RESET;
-				std::string msg = ":" + users[fd].getNickName() + "!" + users[fd].getUserName() + "@localhost" + " PRIVMSG " + users[it->first].getNickName() + " :" + message + "\n";
+				std::string msg = ":" + users[fd].getNickName() + "!" + users[fd].getUserName() + "@localhost" + " PRIVMSG " + users[it->first].getNickName() + " :" + message_stream.str() + "\n";
 				send(it->first, msg.c_str(), msg.length(), 0);
 				return 0;
 			}
 		}
-		std::cout << BLUE"Sending message to " << receiver << "\n" RESET;
-		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + receiver + " :No such nick/channel\r\n";
+		std::cout << BLUE"Sending message to " << blocks[1] << "\n" RESET;
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + blocks[1] + " :No such nick/channel\r\n";
 		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	return 0;
 }
 
-int Server::notice(std::string buf, int fd)
+int Server::notice(std::vector<std::string> blocks, int fd)
 {
-	std::string message = buf.substr(buf.find(':') + 1);
-	message = message.substr(0, message.find('\n'));
-	std::cout << BLUE"Notice: " << message << "\n" RESET;
-
-	if (buf[7] == '#') // Channel message
+	if (blocks.size() < 3)
+		return -1;
+	std::stringstream message_stream;
+	if (blocks[2][0] != ':')
+		return -1;
+	else
 	{
-		std::string channel_name = buf.substr(buf.find('#'));
-		channel_name = channel_name.substr(0, channel_name.find(' '));
+		blocks[2] = blocks[2].substr(1);
+		for (size_t i = 2; i < blocks.size(); i++)
+		{
+			message_stream  << blocks[i];
+			if (i != blocks.size() - 1)
+				message_stream << " ";
+		}
+	}
+	std::cout << BLUE"Notice: " << message_stream.str() << "\n" RESET;
+	if (blocks[1][0] == '#') // Channel message
+	{
 		for (size_t i = 0; i < getChannels().size(); i++)
 		{
-			if (getChannels()[i].getName() == channel_name)
+			if (getChannels()[i].getName() == blocks[1])
 			{
 				for (std::map<std::string, int>::const_iterator it = getChannels()[i].getUsers().begin();
 					 it != getChannels()[i].getUsers().end(); ++it)
@@ -404,49 +418,44 @@ int Server::notice(std::string buf, int fd)
 					if (it->second != fd)
 					{
 						std::cout << "Sending notice to " << users[it->second].getNickName() << "\n";
-						std::string msg = ":" + users[fd].getNickName() + " NOTICE " + channel_name + " :" + message + "\r\n";
+						std::string msg = ":" + users[fd].getNickName() + " NOTICE " + blocks[1] + " :" + message_stream.str() + "\r\n";
 						send(it->second, msg.c_str(), msg.length(), 0);
 					}
 				}
 				return 0;
 			}
 		}
-		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + channel_name + " :No such nick/channel\r\n";
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + blocks[1]+ " :No such nick/channel\r\n";
 		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	else // Private message
 	{
-		std::string receiver = buf.substr(7);
-		receiver = receiver.substr(receiver.find_first_not_of(' '));
-		receiver = receiver.substr(0, receiver.find(' '));
-		std::cout << BLUE"Receiver: " << receiver << "\n" RESET;
+		std::cout << BLUE"Receiver: " << blocks[1] << "\n" RESET;
 		for (std::map<int, User>::iterator it = users.begin(); it != users.end(); ++it)
 		{
-			if (it->second.getNickName() == receiver)
+			if (it->second.getNickName() == blocks[1])
 			{
 				std::cout << BLUE"Sending notice to " << users[it->first].getNickName() << "\n" RESET;
-				std::string msg = ":" + users[fd].getNickName() + " NOTICE " + users[it->first].getNickName() + " :" + message + "\n";
+				std::string msg = ":" + users[fd].getNickName() + " NOTICE " + users[it->first].getNickName() + " :" + message_stream.str() + "\n";
 				send(it->first, msg.c_str(), msg.length(), 0);
 				return 0;
 			}
 		}
-		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + receiver + " :No such nick/channel\r\n";
+		std::string no_target = ":localhost 401 " + users[fd].getNickName() + " " + blocks[1] + " :No such nick/channel\r\n";
 		send(fd, no_target.c_str(), no_target.length(), 0);
 	}
 	return 0;
 }
 
-int Server::part(std::string buf, int fd)
+int Server::part(std::vector<std::string> blocks, int fd)
 {
-	std::string channel_name = buf.substr(buf.find('#'));
-	channel_name = channel_name.substr(0, channel_name.find(' '));
-	if (countWords(buf) != 3)
+	if (blocks.size() != 3 || blocks[1][0] != '#' || blocks[2][0] != ':')
 		return -1;
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
-		if (getChannels()[i].getName() == channel_name)
+		if (getChannels()[i].getName() == blocks[1])
 		{
-			std::string partMessage = ":" + users[fd].getNickName() + " PART " + channel_name + "\r\n";
+			std::string partMessage = ":" + users[fd].getNickName() + " PART " + blocks[1] + "\r\n";
 			send(fd, partMessage.c_str(), partMessage.length(), 0);
 
 			std::string leaver = users[fd].getNickName();
@@ -455,8 +464,8 @@ int Server::part(std::string buf, int fd)
 			{
 				if (it->second != fd)
 				{
-					std::cout << BLUE"Sending parting message to " << users[it->second].getNickName() << "\n" RESET;
-					std::string msg = ":server PRIVMSG " + channel_name + " :" + leaver + " left the channel." + "\r\n";
+					std::cout << BLUE"Sending parting message to " RESET << users[it->second].getNickName() << "\n";
+					std::string msg = ":server PRIVMSG " + blocks[1] + " :" + leaver + " left the channel." + "\r\n";
 					send(it->second, msg.c_str(), msg.length(), 0);
 				}
 			}
@@ -466,22 +475,16 @@ int Server::part(std::string buf, int fd)
 	return 0;
 }
 
-int Server::oper(std::string buf, int fd)
+int Server::oper(std::vector<std::string> blocks, int fd)
 {
-	if (countWords(buf) != 3)
+	if (blocks.size() != 3)
 		return -1;
-    std::string target = buf.substr(buf.find("OPER") + 5);
-    std::string input_pass = target.substr(target.find_first_not_of(' '));
-    input_pass = input_pass.substr(0, input_pass.find("\r\n"));
-    target = target.substr(0, target.find(' '));
+    std::cout << GREEN"target: " RESET << blocks[1] << "|\n";
+    std::cout << BLUE"expected: " RESET << users[fd].getUserName() << "|\n";
+    std::cout << GREEN"input pass: " RESET << blocks[2] << "|\n";
+    std::cout << BLUE"expected: " RESET << oper_auth << "|\n";
 
-    std::cout << GREEN"target: " << target << "|\n" RESET;
-    std::cout << BLUE"expected: " << users[fd].getUserName() << "|\n" RESET;
-
-    std::cout << GREEN"input pass: " << input_pass << "|\n" RESET;
-    std::cout << BLUE"expected: " << oper_auth << "|\n" RESET;
-
-    if (target == users[fd].getUserName() && input_pass == oper_auth)
+    if (blocks[1] == users[fd].getUserName() && blocks[2] == oper_auth)
     {
         server_ops.push_back(fd);
         send(fd, "You are now a server operator.\r\n", 32, 0);
@@ -494,44 +497,47 @@ int Server::oper(std::string buf, int fd)
 	return 0;
 }
 
-int Server::kick(std::string buf, int fd)
+int Server::kick(std::vector<std::string> blocks, int fd)
 {
-    std::string channel_name = buf.substr(buf.find('#'));
-    std::string target_user = channel_name.substr(channel_name.find(' '));
-    target_user = target_user.substr(target_user.find_first_not_of(' '), target_user.find('\n'));
-	target_user = target_user.substr(0, target_user.find('\r'));
-    channel_name = channel_name.substr(0, channel_name.find(' '));
-
-	std::cout << GREEN"channel_name: " << channel_name << "|\n" RESET;
-	std::cout << BLUE"target_user: " << target_user << "|\n" RESET;
+	if (blocks.size() < 3 || blocks[1][0] != '#')
+		return -1;
+	std::cout << GREEN"channel_name: " RESET << blocks[1] << "|\n";
+	std::cout << BLUE"target_user: " RESET << blocks[2] << "|\n";
 
     for (size_t i = 0; i < getChannels().size(); i++)
     {
-        if (getChannels()[i].getName() == channel_name)
+        if (getChannels()[i].getName() == blocks[1])
         {
 			if (!(isInVector(getChannels()[i].getOps(), fd)))
 			{
-				std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
+				std::string msg = ":server PRIVMSG " + blocks[1] + " :You're not a channel operator!\r\n";
 				send(fd, msg.c_str(), msg.length(), 0);
 				return 0;
 			}
-			if (getChannels()[i].getUsers().find(target_user) != getChannels()[i].getUsers().end())
+			if (getChannels()[i].getUsers().find(blocks[2]) != getChannels()[i].getUsers().end())
 			{
-				std::string kickMessage = ":" + users[fd].getNickName() + " KICK " + channel_name + " " + target_user + "\r\n";
-				send(getChannels()[i].getUsers()[target_user], kickMessage.c_str(), kickMessage.length(), 0);
+				std::string kickMessage = ":" + users[fd].getNickName() + " KICK " + blocks[1] + " " + blocks[2];
+				if (blocks.size() > 3)
+				{
+					blocks[3] = blocks[3].substr(1);
+					kickMessage += " :" + blocks[3] + "\r\n";
+				}
+				else
+					kickMessage += "\r\n";
+				send(getChannels()[i].getUsers()[blocks[2]], kickMessage.c_str(), kickMessage.length(), 0);
 
 				std::string op = users[fd].getNickName();
 				for (std::map<std::string, int>::const_iterator it = getChannels()[i].getUsers().begin(); it != getChannels()[i].getUsers().end(); ++it)
 				{
-					if (it->second != getChannels()[i].getUsers()[target_user])
+					if (it->second != getChannels()[i].getUsers()[blocks[2]])
 					{
 						std::cout << BLUE"Sending parting message to " GREEN << users[it->second].getNickName() << "\n" RESET;
-						std::string msg = ":server PRIVMSG " + channel_name + " :" + target_user + " was kicked by " + op + "\r\n";
+						std::string msg = ":server PRIVMSG " + blocks[1] + " :" + blocks[2] + " was kicked by " + op + "\r\n";
 						send(it->second, msg.c_str(), msg.length(), 0);
 					}
 				}
-				getChannels()[i].removeInvite(clientFd(target_user));
-				getChannels()[i].removeMember(target_user);
+				getChannels()[i].removeInvite(clientFd(blocks[2]));
+				getChannels()[i].removeMember(blocks[2]);
 				return 0;
 			}
         }
@@ -539,33 +545,28 @@ int Server::kick(std::string buf, int fd)
 	return 0;
 }
 
-int Server::invite(std::string buf, int fd)
+int Server::invite(std::vector<std::string> blocks, int fd)
 {
-	if (countWords(buf) != 3)
+	if (blocks.size() != 3 || blocks[2][0] != '#')
 		return -1;
-	std::string target_user = buf.substr(buf.find("INVITE") + 7);
-	std::string channel_name = target_user.substr(target_user.find('#'));
-	channel_name = channel_name.substr(0, channel_name.find("\r\n"));
-	target_user = target_user.substr(0, target_user.find(' '));
-
-	std::cout << BLUE"target user: " << target_user << "|\n" RESET;
-	std::cout << BLUE"channel name: " << channel_name << "|\n" RESET;
+	std::cout << BLUE"target user: " << blocks[1] << "|\n" RESET;
+	std::cout << BLUE"channel name: " << blocks[2] << "|\n" RESET;
 
 	for (size_t i = 0; i < getChannels().size(); i++)
 	{
-		if (getChannels()[i].getName() == channel_name)
+		if (getChannels()[i].getName() == blocks[2])
 		{
 			if (!(isInVector(getChannels()[i].getOps(), fd)))
 			{
-				std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
+				std::string msg = ":server PRIVMSG " + blocks[2] + " :You're not a channel operator!\r\n";
 				send(fd, msg.c_str(), msg.length(), 0);
 				return 0;
 			}
-			if (clientFd(target_user) != -1)
+			if (clientFd(blocks[1]) != -1)
 			{
-				std::string inviteMessage = ":" + users[fd].getNickName() + " INVITE " + target_user + " " + channel_name + "\r\n";
-				send(clientFd(target_user), inviteMessage.c_str(), inviteMessage.length(), 0);
-				getChannels()[i].getInviteList().push_back(clientFd(target_user));
+				std::string inviteMessage = ":" + users[fd].getNickName() + " INVITE " + blocks[1] + " " + blocks[2] + "\r\n";
+				send(clientFd(blocks[1]), inviteMessage.c_str(), inviteMessage.length(), 0);
+				getChannels()[i].getInviteList().push_back(clientFd(blocks[1]));
 				getChannels()[i].printVectorInt(getChannels()[i].getInviteList());
 				return 0;
 			}
@@ -574,49 +575,47 @@ int Server::invite(std::string buf, int fd)
 	return 0;
 }
 
-int Server::topic(std::string buf, int fd)
+int Server::topic(std::vector<std::string> blocks, int fd)
 {
-	std::string channel_name = buf.substr(buf.find("TOPIC") + 6);
+	if (blocks.size() < 2 || blocks[1][0] != '#')
+		return -1;
 	std::string topic;
-	if (channel_name.find(':') != std::string::npos)
+	if (blocks.size() > 2 && blocks[2][0] == ':' && blocks[2].length() > 1)
 	{
-		channel_name = channel_name.substr(0, channel_name.find(':') - 1);
-		topic = buf.substr(buf.find(':') + 1, buf.find("\r\n") - buf.find(':'));
-	}
-	else
-	{
-		channel_name = channel_name.substr(0, channel_name.find("\r\n"));
-		topic = "";
+		blocks[2] = blocks[2].substr(1);
+		topic = blocks[2];
 	}
 	size_t i;
-	std::cout << BLUE"channel name: " << channel_name << "|\n" RESET;
+	std::cout << BLUE"channel name: " << blocks[1] << "|\n" RESET;
 	std::cout << BLUE"input topic: " << topic << "|\n" RESET;
 	for (i = 0; i < getChannels().size(); i++)
-		if (getChannels()[i].getName() == channel_name)
+		if (getChannels()[i].getName() == blocks[1])
 			break;
 	std::cout << BLUE"Current topic: " << getChannels()[i].getTopic() << "\n" RESET;
 	if (topic.empty() && i < getChannels().size())
 	{
-		std::string msg = ":server PRIVMSG " + channel_name + " :" + getChannels()[i].getTopic() + "\r\n";
+		std::string msg = ":server PRIVMSG " + blocks[1] + " :" + getChannels()[i].getTopic() + "\r\n";
 		send(fd, msg.c_str(), msg.length(), 0);
 		return 0;
 	}
 	if ((isInVector(getChannels()[i].getOps(), fd) || !getChannels()[i].getTopicMode()) && !topic.empty())
 	{
 		getChannels()[i].changeTopic(topic);
-		std::string msg = ":server PRIVMSG " + channel_name + " :Topic changed to -> " + getChannels()[i].getTopic() + "\r\n";
+		std::string msg = ":server PRIVMSG " + blocks[1] + " :Topic changed to -> " + getChannels()[i].getTopic() + "\r\n";
 		send(fd, msg.c_str(), msg.length(), 0);
 	}
 	else
 	{
-		std::string msg = ":server PRIVMSG " + channel_name + " :You're not a channel operator!\r\n";
+		std::string msg = ":server PRIVMSG " + blocks[1] + " :You're not a channel operator!\r\n";
 		send(fd, msg.c_str(), msg.length(), 0);
 	}
 	return 0;
 }
 
-int Server::mode(std::string buf, int fd)
+int Server::mode(std::vector<std::string> blocks, int fd)
 {
+/*	if (countWords(buf) < 2 || countWords(buf) > 4)
+		return -1;
 	std::string target = buf.substr(buf.find("MODE") + 5);
 	std::string mode;
 	if (target.find(" +") != std::string::npos || target.find(" -") != std::string::npos)
@@ -636,11 +635,34 @@ int Server::mode(std::string buf, int fd)
 	{
 		target = target.substr(0, target.find("\r\n") - 1);
 		mode = "";
+	}*/
+	if (blocks.size() < 2 || blocks.size() > 4)
+		return -1;
+	if (blocks.size() == 2) // Display info about MODE on Channel or User
+	{
+		if (blocks[1][0] == '#')
+		{
+			for (size_t i = 0; i < getChannels().size(); i++)
+				if (getChannels()[i].getName() == blocks[1])
+				{
+					std::string msg = ":server PRIVMSG " + blocks[1] + " :Channel modes: " + getChannels()[i].getModes() + "\r\n";
+					send(fd, msg.c_str(), msg.length(), 0);
+					return 0;
+				}
+		}
+		else
+		{
+			std::string user_mode;
+			if (isInVector(server_ops, fd))
+				user_mode = "+o";
+			else
+				user_mode = "-o";
+			std::string msg = blocks[1] + " modes: " + user_mode + "\r\n";
+			send(fd, msg.c_str(), msg.length(), 0);
+			return 0;
+		}
 	}
-	std::cout << BLUE"target: " << target << "|\n" RESET;
-	std::cout << BLUE"mode: " << mode << "|\n" RESET;
-
-	size_t i = 0;
+/*	size_t i = 0;
 	if (target.find('#') != std::string::npos)
 		for (i = 0; i < getChannels().size(); i++)
 			if (getChannels()[i].getName() == target)
@@ -664,8 +686,109 @@ int Server::mode(std::string buf, int fd)
 			send(fd, msg.c_str(), msg.length(), 0);
 			return 0;
 		}
+	}*/
+	else if (blocks.size() == 3)
+	{
+		if (blocks[1][0] != '#')
+			return -1;
+		else
+		{
+			for (size_t i = 0; i < getChannels().size(); i++)
+				if (getChannels()[i].getName() == blocks[1])
+				{
+					if (blocks[2] == "+i")
+						getChannels()[i].changeInviteMode(true);
+					else if (blocks[2] == "-i")
+						getChannels()[i].changeInviteMode(false);
+					else if (blocks[2] == "+t")
+						getChannels()[i].changeTopicMode(true);
+					else if (blocks[2] == "-t")
+						getChannels()[i].changeTopicMode(false);
+					else if (blocks[2] == "-k")
+						getChannels()[i].changeKeyMode(false);
+					else if (blocks[2] == "-l")
+						getChannels()[i].changeMemberLimit(false);
+					else if (blocks[2] == "+k" || blocks[2] == "+l" || blocks[2] == "+o" || blocks[2] == "-o")
+					{
+						std::string msg = ":server PRIVMSG " + blocks[1] + " :Not enough arguments!\r\n";
+						send(fd, msg.c_str(), msg.length(), 0);
+					}
+					else
+						return -1;
+					return 0;
+				}
+		}
 	}
-	else if (target[0] != ' ' && i < getChannels().size())
+	else if (blocks.size() == 4)
+	{
+		if (blocks[1][0] != '#')
+			return -1;
+		else
+		{
+			for (size_t i = 0; i < getChannels().size(); i++)
+				if (getChannels()[i].getName() == blocks[1])
+				{
+					if (blocks[2] == "+k")
+					{
+						if (validate_input((char *)"4242", (char *)blocks[3].c_str()))
+						{
+							getChannels()[i].changeKeyMode(true);
+							getChannels()[i].changeKey(blocks[3]);
+						}
+						else
+						{
+							std::string msg = ":server PRIVMSG " + blocks[1] + " :You must specify an alphanumerical key!(at most 8 chars)\r\n";
+							send(fd, msg.c_str(), msg.length(), 0);
+							return 0;
+						}
+					}
+					else if (blocks[2] == "+l")
+					{
+						int numerical_arg = std::atoi(blocks[3].c_str());
+						if (numerical_arg > 0 && numerical_arg < 100)
+							getChannels()[i].changeMemberLimit(numerical_arg);
+						else
+						{
+							std::string msg = ":server PRIVMSG " + blocks[1] + " :Limit must be between 0-100!\r\n";
+							send(fd, msg.c_str(), msg.length(), 0);
+							return 0;
+						}
+					}
+					else if (blocks[2] == "+o")
+					{
+						if (clientFd(blocks[3]) != -1)
+						{
+							if (!isInVector(getChannels()[i].getOps(), clientFd(blocks[3])))
+								getChannels()[i].addOp(clientFd(blocks[3]));
+						}
+						else
+						{
+							std::string msg = ":server PRIVMSG " + blocks[1] + " :No such nick!\r\n";
+							send(fd, msg.c_str(), msg.length(), 0);
+							return 0;
+						}
+					}
+					else if (blocks[2] == "-o")
+					{
+						if (clientFd(blocks[3]) != -1)
+						{
+							if (isInVector(getChannels()[i].getOps(), clientFd(blocks[3])))
+								getChannels()[i].removeOp(clientFd(blocks[3]));
+						}
+						else
+						{
+							std::string msg = ":server PRIVMSG " + blocks[1] + " :No such nick!\r\n";
+							send(fd, msg.c_str(), msg.length(), 0);
+							return 0;
+						}
+					}
+					else
+						return -1;
+					return 0;
+				}
+		}
+	}
+	/*else if (target[0] != ' ' && i < getChannels().size())
 	{
 		if (isInVector(getChannels()[i].getOps(), fd) || isInVector(server_ops, fd))
 		{
@@ -731,13 +854,12 @@ int Server::mode(std::string buf, int fd)
 			else if (mode == "-o")
 				getChannels()[i].removeOp(clientFd(mode_arg));
 			return 0;
-		}
-		else
-		{
-			std::string msg = ":server PRIVMSG " + target + " :You're not a channel operator!\r\n";
-			send(fd, msg.c_str(), msg.length(), 0);
-			return 0;
-		}
+		}*/
+	else
+	{
+		std::string msg = ":server PRIVMSG " + blocks[1] + " :You're not a channel operator!\r\n";
+		send(fd, msg.c_str(), msg.length(), 0);
+		return 0;
 	}
 	return 0;
 }

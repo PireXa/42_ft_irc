@@ -86,15 +86,3 @@ bool isInVector(const std::vector<int>& vec, int target)
 	}
 	return false;
 }
-
-int countWords(const std::string& str)
-{
-	std::stringstream ss(str);
-	std::string word;
-	int count = 0;
-
-	while (ss >> std::ws >> word)
-		count++;
-
-	return count;
-}
