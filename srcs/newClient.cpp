@@ -108,7 +108,6 @@ void Server::processClient(int client_fd, const std::string& password)
 		std::cout << RED"Password not validated.\n" RESET;
 		send(client_fd, "Invalid password, submit again please.\r\n", 40, 0);
 
-//		close(client_fd);
 		unlink(".request.txt");
 		std::memset(buffer2, 0, sizeof(buffer2));
 	}

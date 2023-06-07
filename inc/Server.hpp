@@ -40,6 +40,7 @@ public:
 		int clientFd(std::string &nick);
 		bool validateNickUser(std::string &name, int client_fd, int flag);
 	// Commands
+		void commandmaster(std::string buf, int fd);
 		void commands(std::string buf, int fd);
 		int pass(std::vector<std::string> blocks, int fd);
 		int nick(std::vector<std::string> blocks, int fd);

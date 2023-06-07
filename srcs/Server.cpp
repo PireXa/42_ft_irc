@@ -83,6 +83,8 @@ void Server::existingClient(int fd)
 	int client_fd = fd;
 	std::memset(buffer, 0, sizeof(buffer));
 	int num_bytes = recv(client_fd, buffer, sizeof(buffer), 0);
+	static std::string partial_buffer[1024];
+
 	if (num_bytes == -1)
 	{
 		std::cerr << RED"Error receiving data from client\n" RESET;
@@ -90,7 +92,7 @@ void Server::existingClient(int fd)
 		epoll_ctl(getEpollFd(), EPOLL_CTL_DEL, client_fd, 0);
 		getUsers().erase(client_fd);
 	}
-	else if (num_bytes == 0 || ((std::string) buffer).substr(0, 13) == ("QUIT :Leaving"))
+	else if (num_bytes == 0 || ((std::string) buffer) == ("QUIT :Leaving\n") || ((std::string) buffer) == ("QUIT :Leaving\r\n"))
 	{
         for (std::vector<Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
         {
@@ -110,13 +112,13 @@ void Server::existingClient(int fd)
             }
         }
         std::cout << ORANGE"Client disconnected." RESET "\n";
+		partial_buffer[client_fd].erase();
         close(client_fd);
 		epoll_ctl(getEpollFd(), EPOLL_CTL_DEL, client_fd, 0);
 		getUsers().erase(client_fd);
 	}
 	else
 	{
-		static std::string partial_buffer[1024];
 		std::cout << GREEN"Received " << num_bytes << " bytes from client\n" RESET;
 		std::cout << buffer << std::endl;
 		if (((std::string)buffer).find('\n') != std::string::npos)
@@ -126,7 +128,7 @@ void Server::existingClient(int fd)
 			command[client_fd] = partial_buffer[client_fd] + buffer;
 			partial_buffer[client_fd].clear();
 			std::cout << GREEN"COMMAND: " RESET << command[client_fd] << std::endl;
-			commands(command[client_fd], client_fd);
+			commandmaster(command[client_fd], client_fd);
 		}
 		else
 		{
